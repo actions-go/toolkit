@@ -45,7 +45,7 @@ type command struct {
 
 func (c *command) String() string {
 	s := cmdString + c.command
-	sep := ""
+	sep := " "
 	for key, value := range c.properties {
 		s += sep + key + "=" + escape(value)
 		sep = ","
@@ -66,9 +66,12 @@ func escapeData(v string) string {
 func escape(v string) string {
 	return strings.Replace(
 		strings.Replace(
+		strings.Replace(
 			escapeData(v),
 			"]", "%5D", -1,
 		),
 		";", "%3B", -1,
-	)
+	),
+	",", "%2C",-1,
+)
 }

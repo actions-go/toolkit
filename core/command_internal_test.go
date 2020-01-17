@@ -16,10 +16,13 @@ func TestIssue(t *testing.T) {
 	stdout = b
 	Issue("hello")
 	assert.Equal(t, "::hello::\n", b.String())
-	b = bytes.NewBuffer(nil)
+}
+func TestIssueCommand(t *testing.T) {
+	b := bytes.NewBuffer(nil)
 	stdout = b
 	IssueCommand("hello", map[string]string{
-		"some": "a\n\rvalue];",
+		"some":  "a\n\rvalue,];",
+		"other": "value",
 	}, "some\r\nmessage")
-	assert.Equal(t, "::hellosome=a%0A%0Dvalue%5D%3B::some%0D%0Amessage\n", b.String())
+	assert.Equal(t, "::hello some=a%0A%0Dvalue%2C%5D%3B,other=value::some%0D%0Amessage\n", b.String())
 }
