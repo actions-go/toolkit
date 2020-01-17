@@ -2,9 +2,15 @@ package core
 
 import (
 	"bytes"
-	"github.com/stretchr/testify/assert"
+	"io"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
+
+func SetStdout(w io.Writer) {
+	stdout = w
+}
 
 func TestIssue(t *testing.T) {
 	b := bytes.NewBuffer(nil)

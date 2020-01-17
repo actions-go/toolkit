@@ -11,7 +11,9 @@ const (
 	cmdString = "::"
 )
 
-var stdout io.Writer = os.Stdout
+var (
+	stdout io.Writer = os.Stdout
+)
 
 // Issue displays a plain typed message following github actions interface
 func Issue(kind string, message ...string) {
