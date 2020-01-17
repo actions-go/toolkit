@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"strings"
+	"sync"
 )
 
 const (
@@ -12,8 +13,15 @@ const (
 )
 
 var (
-	stdout io.Writer = os.Stdout
+	stdout       io.Writer = os.Stdout
+	stdoutSetter sync.Mutex
 )
+
+func SetStdout(w io.Writer) {
+	stdoutSetter.Lock()
+	stdout = w
+	stdoutSetter.Unlock()
+}
 
 // Issue displays a plain typed message following github actions interface
 func Issue(kind string, message ...string) {
@@ -24,7 +32,9 @@ func Issue(kind string, message ...string) {
 // see https://github.com/actions/toolkit/blob/e69833ed16500afaa7d137a9cf6da76fb8fb54da/packages/core/src/command.ts#L19
 func IssueCommand(kind string, properties map[string]string, message string) {
 	c := &command{kind, properties, message}
+	stdoutSetter.Lock()
 	fmt.Fprintln(stdout, c.String())
+	stdoutSetter.Unlock()
 }
 
 type command struct {
