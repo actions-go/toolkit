@@ -57,4 +57,7 @@ jobs:
       run: go mod download
 
     - name: run tests
+      env:
+        # unauthenticated calls have lower limits than authenticated ones
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: go test -v -race -coverprofile=coverage.txt -covermode=atomic ./...
