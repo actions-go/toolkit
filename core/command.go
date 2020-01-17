@@ -15,6 +15,14 @@ const (
 var (
 	stdout       io.Writer = os.Stdout
 	stdoutSetter sync.Mutex
+	dataEscapes  = map[string]string{
+		"\r": "%0D",
+		"\n": "%0A",
+	}
+	escapes = map[string]string{
+		":": "%3A",
+		",": "%2C",
+	}
 )
 
 func SetStdout(w io.Writer) {
@@ -53,25 +61,20 @@ func (c *command) String() string {
 	return s + cmdString + escape(c.message)
 }
 
+func escapePatterns(v string, replacementsArg ...map[string]string) string {
+	v = strings.Replace(v, "%", "%25", -1)
+	for _, replacements := range replacementsArg {
+		for pattern, replacement := range replacements {
+			v = strings.Replace(v, pattern, replacement, -1)
+		}
+	}
+	return v
+}
+
 func escapeData(v string) string {
-	return strings.Replace(
-		strings.Replace(
-			v,
-			"\r", "%0D", -1,
-		),
-		"\n", "%0A", -1,
-	)
+	return escapePatterns(v, dataEscapes)
 }
 
 func escape(v string) string {
-	return strings.Replace(
-		strings.Replace(
-		strings.Replace(
-			escapeData(v),
-			"]", "%5D", -1,
-		),
-		";", "%3B", -1,
-	),
-	",", "%2C",-1,
-)
+	return escapePatterns(v, escapes, dataEscapes)
 }
