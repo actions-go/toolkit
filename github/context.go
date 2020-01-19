@@ -9,6 +9,9 @@ import (
 	"github.com/google/go-github/v29/github"
 )
 
+// Context contains details on the workflow execution
+var Context = parseenv()
+
 // WebhookPayload webhook payload object that triggered the workflow
 type WebhookPayload struct {
 	*github.PushEvent
