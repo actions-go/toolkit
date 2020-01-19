@@ -7,8 +7,10 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"sort"
 	"strings"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/actions-go/toolkit/core"
 	"github.com/google/uuid"
 )
@@ -228,6 +230,61 @@ func CacheFile(source, target string, options CacheOptions) (string, error) {
 // with a given targetName
 func CacheDir(source string, options CacheOptions) (string, error) {
 	return cache(source, "", options)
+}
+
+// ListAllCachedVersions discovers all versions available in cache
+func ListAllCachedVersions(options CacheOptions) []string {
+	if options.Tool == "" {
+		core.Errorf("missing tool name to list versions")
+		return []string{}
+	}
+	options.Version = "*"
+	matched, err := filepath.Glob(toolPath(options))
+	if err != nil {
+		core.Warningf("unable to list cached versions: %v", err)
+		return []string{}
+	}
+	versions := []string{}
+	for _, match := range matched {
+		p, err := filepath.Rel(filepath.Join(cacheRoot, options.Tool), match)
+		if err == nil {
+			versions = append(versions, strings.SplitN(p, string(filepath.Separator), 2)[0])
+		} else {
+			core.Warningf("error getting version, unable to get relative path from %s to %s: %v", match, filepath.Join(cacheRoot, options.Tool), err)
+		}
+	}
+	return versions
+}
+
+// FindVersion finds the path to a tool version in the local installed tool cache
+// by matching the pattern provided in the Version field
+func FindVersion(options CacheOptions) (string, error) {
+	versions := semver.Collection{}
+	constraint, err := semver.NewConstraint(options.Version)
+	if err != nil {
+		return "", err
+	}
+	for _, v := range ListAllCachedVersions(options) {
+		s, err := semver.NewVersion(v)
+		if err == nil {
+			versions = append(versions, s)
+		} else {
+			core.Warningf("failed to parse version %s: %v", v, err)
+		}
+	}
+
+	sort.Sort(versions)
+	for i := len(versions) - 1; i >= 0; i-- {
+		version := versions[i]
+		if constraint.Check(version) {
+			options.Version = version.Original()
+			path := toolPath(options)
+			if _, err := os.Stat(path); err == nil {
+				return toolPath(options), nil
+			}
+		}
+	}
+	return "", fmt.Errorf("could not find any cached version for %s matching %s", options.Tool, options.Version)
 }
 
 // DownloadTool Download a tool from an url and stream it into a file
