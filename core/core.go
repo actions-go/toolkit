@@ -60,9 +60,19 @@ func Debug(message string) {
 	Issue("debug", message)
 }
 
+// Debugf writes debug message to user log
+func Debugf(format string, args ...interface{}) {
+	Debug(fmt.Sprintf(format, args...))
+}
+
 // Error adds an error issue
 func Error(message string) {
 	Issue("error", message)
+}
+
+// Errorf writes debug message to user log
+func Errorf(format string, args ...interface{}) {
+	Error(fmt.Sprintf(format, args...))
 }
 
 // Warning adds a warning issue
@@ -70,9 +80,19 @@ func Warning(message string) {
 	Issue("warning", message)
 }
 
+// Warningf writes debug message to user log
+func Warningf(format string, args ...interface{}) {
+	Warning(fmt.Sprintf(format, args...))
+}
+
 // Info writes the message on the console
 func Info(message string) {
 	fmt.Println(message)
+}
+
+// Infof writes debug message to user log
+func Infof(format string, args ...interface{}) {
+	Info(fmt.Sprintf(format, args...))
 }
 
 // StartGroup begin an output group. Output until the next `GroupEnd` will be foldable in this group
