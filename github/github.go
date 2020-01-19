@@ -5,12 +5,25 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/actions-go/toolkit/core"
 	"github.com/google/go-github/v29/github"
 	"golang.org/x/oauth2"
 )
 
+func token() string {
+	if t := os.Getenv("GITHUB_TOKEN"); t != "" {
+		return t
+	}
+	for _, input := range []string{"github-token", "token"} {
+		if t, ok := core.GetInput(input); ok {
+			return t
+		}
+	}
+	return ""
+}
+
 func NewClient() *github.Client {
-	token := os.Getenv("GITHUB_TOKEN")
+	token := token()
 	httpClient := http.DefaultClient
 	if token != "" {
 		ts := oauth2.StaticTokenSource(
