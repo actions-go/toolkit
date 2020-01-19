@@ -92,6 +92,47 @@ func TestCacheFile(t *testing.T) {
 	assert.FileExists(t, path+".complete")
 }
 
+func TestListAllCachedVersions(t *testing.T) {
+	cacheRoot = "test-cache-root-" + uuid.New().String()
+	defer os.RemoveAll(cacheRoot)
+
+	assert.Equal(t, []string{}, ListAllCachedVersions(CacheOptions{Tool: "some-tool"}))
+	os.MkdirAll(filepath.Join(cacheRoot, "some-tool", "1.203.2", "x86"), cachePerms)
+	os.MkdirAll(filepath.Join(cacheRoot, "some-tool", "1.204.2", "x86"), cachePerms)
+	os.MkdirAll(filepath.Join(cacheRoot, "some-tool", "1.205.2", "386"), cachePerms)
+	versions := ListAllCachedVersions(CacheOptions{Tool: "some-tool"})
+	assert.Len(t, versions, 3)
+	assert.Contains(t, versions, "1.203.2")
+	assert.Contains(t, versions, "1.204.2")
+	assert.Contains(t, versions, "1.205.2")
+
+	versions = ListAllCachedVersions(CacheOptions{Tool: "some-tool", Arch: "386"})
+	assert.Len(t, versions, 1)
+	assert.Contains(t, versions, "1.205.2")
+}
+
+func TestFindVersions(t *testing.T) {
+	cacheRoot = "test-cache-root-" + uuid.New().String()
+	defer os.RemoveAll(cacheRoot)
+	os.MkdirAll(filepath.Join(cacheRoot, "some-tool", "1.203.2", "x86"), cachePerms)
+	os.MkdirAll(filepath.Join(cacheRoot, "some-tool", "1.204.2", "x86"), cachePerms)
+	os.MkdirAll(filepath.Join(cacheRoot, "some-tool", "1.205.2", "386"), cachePerms)
+	os.MkdirAll(filepath.Join(cacheRoot, "some-tool", "1.205.2", "x86"), cachePerms)
+	os.MkdirAll(filepath.Join(cacheRoot, "some-tool", "1.205.3", "x86"), cachePerms)
+
+	path, err := FindVersion(CacheOptions{Tool: "some-tool"})
+	assert.Error(t, err)
+	assert.Equal(t, "", path)
+
+	path, err = FindVersion(CacheOptions{Tool: "some-tool", Version: "~1.205"})
+	assert.NoError(t, err)
+	assert.Equal(t, filepath.Join(cacheRoot, "some-tool", "1.205.3"), path)
+
+	path, err = FindVersion(CacheOptions{Tool: "some-tool", Version: "~1.205", Arch: "386"})
+	assert.NoError(t, err)
+	assert.Equal(t, filepath.Join(cacheRoot, "some-tool", "1.205.2", "386"), path)
+}
+
 func TestCacheDir(t *testing.T) {
 	cacheRoot = "test-cache-root-" + uuid.New().String()
 	defer os.RemoveAll(cacheRoot)
