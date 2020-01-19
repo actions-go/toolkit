@@ -85,7 +85,7 @@ func testEventParser(t *testing.T, path string) {
 		os.Setenv("GITHUB_WORKFLOW", "CI")
 		os.Setenv("GITHUB_WORKSPACE", "/home/runner/work/actions-playground/actions-playground")
 		os.Setenv("GITHUB_EVENT_PATH", path)
-		e := parseenv()
+		e := ParseActionEnv()
 		b := bytes.NewBuffer(nil)
 		assert.NoError(t, json.NewEncoder(b).Encode(e.Payload))
 		data, err := ioutil.ReadFile(path)

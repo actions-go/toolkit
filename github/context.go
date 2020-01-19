@@ -10,7 +10,7 @@ import (
 )
 
 // Context contains details on the workflow execution
-var Context = parseenv()
+var Context = ParseActionEnv()
 
 // WebhookPayload webhook payload object that triggered the workflow
 type WebhookPayload struct {
@@ -101,7 +101,8 @@ func getIndex(a []string, i int) string {
 	return ""
 }
 
-func parseenv() ActionContext {
+// ParseActionEnv parses the environemnt and extracts the ActionContext on demand. For example in tests
+func ParseActionEnv() ActionContext {
 	r := strings.SplitN(os.Getenv("GITHUB_REPOSITORY"), "/", 2)
 	repo := ActionRepo{
 		Owner: getIndex(r, 0),
