@@ -19,7 +19,7 @@ This toolkit is a pure go port of the official [@actions/toolkit](https://github
 
 ## Packages
 
-:heavy_check_mark: [github.com/actions-go/core](core) 
+:heavy_check_mark: [github.com/actions-go/toolkit/core](core) 
 
 [![GoDoc](https://godoc.org/github.com/actions-go/toolkit/core?status.svg)](https://godoc.org/github.com/actions-go/toolkit/core)
 
@@ -30,7 +30,7 @@ $ go get github.com/actions-go/core
 ```
 <br/>
 
-:hammer: [github.com/actions-go/cache](cache) 
+:hammer: [github.com/actions-go/toolkit/cache](cache) 
 
 [![GoDoc](https://godoc.org/github.com/actions-go/toolkit/cache?status.svg)](https://godoc.org/github.com/actions-go/toolkit/cache)
 
@@ -41,7 +41,7 @@ $ go get github.com/actions-go/cache
 ```
 <br/>
 
-:octocat: [github.com/actions-go/github](github) 
+:octocat: [github.com/actions-go/toolkit/github](github) 
 
 [![GoDoc](https://godoc.org/github.com/actions-go/toolkit/github?status.svg)](https://godoc.org/github.com/actions-go/toolkit/github)
 
