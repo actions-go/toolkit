@@ -22,6 +22,7 @@ const (
 // DownloadToolOptions defines available options to download tools
 type DownloadToolOptions struct {
 	Destination string
+	FileMode    os.FileMode
 }
 
 // CacheOptions defines the available options for tool and file caching
@@ -216,6 +217,14 @@ func copyFile(dest, src string) error {
 	if err != nil {
 		return err
 	}
+	stat, err := os.Stat(src)
+	if err != nil {
+		return err
+	}
+	err = os.Chmod(dest, stat.Mode())
+	if err != nil {
+		return err
+	}
 	_, err = io.Copy(out, in)
 	return err
 }
@@ -313,5 +322,25 @@ func DownloadTool(url string, options *DownloadToolOptions) (string, error) {
 	if err := copyURL(out, url); err != nil {
 		return wrapError(err, "failed to write file %s", dest)
 	}
-	return dest, nil
+	if options != nil && options.FileMode != 0 {
+		err = os.Chmod(dest, options.FileMode)
+	}
+	return dest, err
+}
+
+// GetCachedToolOrDownload returns the path of a cached tool or downloads and caches it
+func GetCachedToolOrDownload(cache CacheOptions, download *DownloadToolOptions, url string) (string, error) {
+	path, err := FindVersion(cache)
+	if err != nil {
+		path, err := DownloadTool(url, download)
+		if err != nil {
+			return "", err
+		}
+		_, err = CacheFile(path, cache.Tool, cache)
+		if err != nil {
+			core.Warningf("failed to cache downloaded file %v: %v", path, err)
+		}
+		return path, nil
+	}
+	return filepath.Join(path, cache.Tool), nil
 }

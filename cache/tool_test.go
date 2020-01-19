@@ -32,3 +32,36 @@ func TestDownloadTool(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, data, string(bytes))
 }
+
+func TestGetCachedToolOrDownload(t *testing.T) {
+	data := "hello-world"
+	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.Write([]byte(data)) }))
+	defer s.Close()
+	testID := uuid.New().String()
+	tempDir := "./temp-" + testID
+	cacheDir := "./test-cache-" + testID
+	defer os.RemoveAll(tempDir)
+	defer os.RemoveAll(cacheDir)
+	cache.SetTempDir(tempDir)
+	cache.SetCacheRoot(cacheDir)
+
+	f, err := cache.GetCachedToolOrDownload(cache.CacheOptions{Tool: "my-tool", Version: "1.0.1"}, &cache.DownloadToolOptions{}, s.URL)
+	assert.NoError(t, err)
+	assert.Regexp(t, regexp.MustCompile(fmt.Sprintf("^temp-%s/[0-9a-f-]{36}", testID)), f)
+	_, err = os.Stat(f)
+	assert.NoError(t, err)
+	bytes, err := ioutil.ReadFile(f)
+	assert.NoError(t, err)
+	assert.Equal(t, data, string(bytes))
+
+	s.Close()
+
+	f, err = cache.GetCachedToolOrDownload(cache.CacheOptions{Tool: "my-tool", Version: "1.0.1"}, &cache.DownloadToolOptions{}, s.URL)
+	assert.NoError(t, err)
+	assert.Equal(t, fmt.Sprintf("test-cache-%s/my-tool/1.0.1/my-tool", testID), f)
+	_, err = os.Stat(f)
+	assert.NoError(t, err)
+	bytes, err = ioutil.ReadFile(f)
+	assert.NoError(t, err)
+	assert.Equal(t, data, string(bytes))
+}

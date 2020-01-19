@@ -20,6 +20,11 @@ func SetTempDir(d string) {
 	tempDirectory = d
 }
 
+// SetCacheRoot a helper for easier testing
+func SetCacheRoot(d string) {
+	cacheRoot = d
+}
+
 func TestDestination(t *testing.T) {
 	defer SetTempDir(tempDirectory)
 	SetTempDir("./temp")
