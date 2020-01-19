@@ -9,8 +9,8 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/actions-go/toolkit/core"
 	"github.com/google/uuid"
-	"github.com/tjamet/go-github-action-toolkit/core"
 )
 
 const (

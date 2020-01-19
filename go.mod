@@ -1,4 +1,4 @@
-module github.com/tjamet/go-github-action-toolkit
+module github.com/actions-go/toolkit
 
 go 1.13
 

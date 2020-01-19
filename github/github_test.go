@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
+	"github.com/actions-go/toolkit/github"
 	"github.com/stretchr/testify/assert"
-	"github.com/tjamet/go-github-action-toolkit/github"
 )
 
 func TestClient(t *testing.T) {

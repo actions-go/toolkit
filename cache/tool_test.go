@@ -9,9 +9,9 @@ import (
 	"regexp"
 	"testing"
 
+	"github.com/actions-go/toolkit/cache"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
-	"github.com/tjamet/go-github-action-toolkit/cache"
 )
 
 func TestDownloadTool(t *testing.T) {
