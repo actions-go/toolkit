@@ -17,6 +17,7 @@ const (
 var (
 	status       = StatusSuccess
 	statusAccess = &sync.Mutex{}
+	lookupEnv    = os.LookupEnv
 )
 
 // ExportVariable sets the environment varaible name (for this action and future actions)
@@ -36,10 +37,25 @@ func AddPath(path string) {
 	Issue("add-path", path)
 }
 
+// GetBoolInput gets the value of an input and returns whether it equals "true".
+// In any other case, whether it does not equal, or the input is not set, false is returned
+func GetBoolInput(name string) bool {
+	return strings.ToLower(GetInputOrDefault(name, "false")) == "true"
+}
+
 // GetInput gets the value of an input.  The value is also trimmed.
 func GetInput(name string) (string, bool) {
-	val, ok := os.LookupEnv(strings.ToUpper("INPUT_" + strings.Replace(name, " ", "_", -1)))
+	val, ok := lookupEnv(strings.ToUpper("INPUT_" + strings.Replace(name, " ", "_", -1)))
 	return strings.TrimSpace(val), ok
+}
+
+// GetInputOrDefault gets the value of an input. If value is not found, a default value is used
+func GetInputOrDefault(name, dflt string) string {
+	val, ok := GetInput(name)
+	if ok {
+		return val
+	}
+	return dflt
 }
 
 // SetOutput sets the value of an output for future actions
