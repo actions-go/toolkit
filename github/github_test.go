@@ -24,7 +24,9 @@ func TestClient(t *testing.T) {
 
 func TestDownload(t *testing.T) {
 	files := github.DownloadSelectedRepositoryFiles(http.DefaultClient, "actions-go", "toolkit", "09edac1c7d93e0dd7fe5a14dc410fb0b41ea01c4", github.MatchesOneOf("^module.go$"))
-	assert.Equal(t, map[string][]byte{"module.go": []byte(content)}, files)
+	assert.Len(t, files, 1)
+	assert.Equal(t, "module.go", files["module.go"].Path)
+	assert.Equal(t, []byte(content), files["module.go"].Data)
 }
 
 func TestMatchOneOf(t *testing.T) {

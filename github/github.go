@@ -52,8 +52,14 @@ func authorize(r *http.Request) {
 
 type Matcher func(path string) bool
 
+type RepositoryFile struct {
+	Path     string
+	FileInfo os.FileInfo
+	Data     []byte
+}
+
 // DownloadSelectedRepositoryFiles downloads files from a given repository and granch, given that their name matches regarding the `include` function
-func DownloadSelectedRepositoryFiles(c *http.Client, owner, repo, branch string, include Matcher) map[string][]byte {
+func DownloadSelectedRepositoryFiles(c *http.Client, owner, repo, branch string, include Matcher) map[string]RepositoryFile {
 	u := fmt.Sprintf("https://api.github.com/repos/%s/%s/tarball/%s", owner, repo, branch)
 	core.Debugf("Downloading tarball for repo: %s", u)
 	req, err := http.NewRequest("GET", u, nil)
@@ -81,7 +87,7 @@ func DownloadSelectedRepositoryFiles(c *http.Client, owner, repo, branch string,
 			return nil
 		}
 	}
-	files := map[string][]byte{}
+	files := map[string]RepositoryFile{}
 	tr := tar.NewReader(body)
 	for {
 		hdr, err := tr.Next()
@@ -103,7 +109,11 @@ func DownloadSelectedRepositoryFiles(c *http.Client, owner, repo, branch string,
 				core.Warningf("failed to download repository: %v", err)
 				return nil
 			}
-			files[name] = b.Bytes()
+			files[name] = RepositoryFile{
+				Path:     name,
+				FileInfo: hdr.FileInfo(),
+				Data:     b.Bytes(),
+			}
 		}
 	}
 	return files
