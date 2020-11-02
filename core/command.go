@@ -45,6 +45,21 @@ func IssueCommand(kind string, properties map[string]string, message string) {
 	stdoutSetter.Unlock()
 }
 
+// issueFileCommand implements stores the command in a file
+// see https://github.com/actions/toolkit/pull/571/files#diff-9ce6eb99f5fb5529e795254801e03ae56d67d3d5fcbec635f91e9a8a61ad8b64R10
+func issueFileCommand(command string, message string) error {
+	path, ok := os.LookupEnv("GITHUB_" + command)
+	if ok {
+		fd, err := os.OpenFile(path, os.O_RDWR, 0)
+		if err != nil {
+			return err
+		}
+		fmt.Fprintln(fd, message)
+		return nil
+	}
+	return fmt.Errorf("unable to find command file GITHUB_%s", command)
+}
+
 type command struct {
 	command    string
 	properties map[string]string
