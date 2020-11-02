@@ -63,6 +63,11 @@ func SetOutput(name, value string) {
 	IssueCommand("set-output", map[string]string{"name": name}, value)
 }
 
+// SetFailedf sets the action status to failed and sets an error message
+func SetFailedf(format string, args ...interface{}) {
+	SetFailed(fmt.Sprintf(format, args...))
+}
+
 // SetFailed sets the action status to failed and sets an error message
 func SetFailed(message string) {
 	statusAccess.Lock()
@@ -138,4 +143,9 @@ func SaveState(name, value string) {
 // GetState gets the value of an state set by this action's main execution.
 func GetState(name string) string {
 	return os.Getenv("STATE_" + name)
+}
+
+// IsDebug returns whether the github actions is currently under debug
+func IsDebug() bool {
+	return os.Getenv("RUNNER_DEBUG") == "1"
 }
