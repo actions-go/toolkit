@@ -22,8 +22,11 @@ var (
 
 // ExportVariable sets the environment varaible name (for this action and future actions)
 func ExportVariable(name, value string) {
+	const delimiter = "_GitHubActionsFileCommandDelimeter_"
+	if err := issueFileCommand("ENV", fmt.Sprintf("%s<<%s%s%s%s%s", name, delimiter, EOF, value, delimiter, EOF)); err != nil {
+		IssueCommand("set-env", map[string]string{"name": name}, value)
+	}
 	os.Setenv(name, value)
-	IssueCommand("set-env", map[string]string{"name": name}, value)
 }
 
 // SetSecret registers a secret which will get masked from logs
@@ -33,8 +36,10 @@ func SetSecret(secret string) {
 
 // AddPath prepends inputPath to the PATH (for this action and future actions)
 func AddPath(path string) {
+	if err := issueFileCommand("PATH", path); err != nil {
+		Issue("add-path", path)
+	}
 	// TODO js: process.env['PATH'] = `${inputPath}${path.delimiter}${process.env['PATH']}`
-	Issue("add-path", path)
 }
 
 // GetBoolInput gets the value of an input and returns whether it equals "true".
