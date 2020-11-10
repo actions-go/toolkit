@@ -6,7 +6,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/google/go-github/v29/github"
+	"github.com/google/go-github/v32/github"
 )
 
 // Context contains details on the workflow execution
