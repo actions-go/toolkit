@@ -39,11 +39,9 @@ func TestEnsureDestDir(t *testing.T) {
 	defer os.Remove(dir)
 	assert.NoError(t, ensureDestDir(filepath.Join(dir, "some-file")))
 	assert.NoError(t, ensureDestDir(filepath.Join(dir, "some-file")))
-	abs := "/"
-	if runtime.GOOS == "windows" {
-		abs = "k://"
+	if runtime.GOOS != "windows" {
+		assert.Error(t, ensureDestDir("/some-non-existing-dir/some-file"))
 	}
-	assert.Error(t, ensureDestDir(filepath.Join(abs, "some-non-existing-dir", "some-file")))
 }
 
 func TestEnsureDestNotExists(t *testing.T) {
