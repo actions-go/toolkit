@@ -56,14 +56,14 @@ jobs:
     - name: Get dependencies
       run: go mod download
 
-    - name: run tests
+    - name: run linux tests
       if: ${{ matrix.os }} != "windows-latest"
       env:
         # unauthenticated calls have lower limits than authenticated ones
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: go test -v -race -coverprofile=coverage.txt -covermode=atomic ./...
 
-    - name: run tests
+    - name: run windows tests
       if: ${{ matrix.os }} == "windows-latest"
       env:
         # unauthenticated calls have lower limits than authenticated ones
