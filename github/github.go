@@ -101,18 +101,21 @@ func DownloadSelectedRepositoryFiles(c *http.Client, owner, repo, branch string,
 		if hdr.Format == tar.FormatPAX || hdr.FileInfo().IsDir() {
 			continue
 		}
-		name := strings.SplitN(hdr.Name, string(os.PathSeparator), 2)[1]
-		if include(name) {
-			core.Debugf("Downloading %v", hdr.Name)
-			b := bytes.NewBuffer(nil)
-			if _, err := io.Copy(b, tr); err != nil {
-				core.Warningf("failed to download repository: %v", err)
-				return nil
-			}
-			files[name] = RepositoryFile{
-				Path:     name,
-				FileInfo: hdr.FileInfo(),
-				Data:     b.Bytes(),
+		splittedName := strings.SplitN(hdr.Name, "/", 2)
+		if len(splittedName) > 1 {
+			name := splittedName[1]
+			if include(name) {
+				core.Debugf("Downloading %v", hdr.Name)
+				b := bytes.NewBuffer(nil)
+				if _, err := io.Copy(b, tr); err != nil {
+					core.Warningf("failed to download repository: %v", err)
+					return nil
+				}
+				files[name] = RepositoryFile{
+					Path:     name,
+					FileInfo: hdr.FileInfo(),
+					Data:     b.Bytes(),
+				}
 			}
 		}
 	}

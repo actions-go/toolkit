@@ -29,8 +29,8 @@ func TestDestination(t *testing.T) {
 	defer SetTempDir(tempDirectory)
 	SetTempDir("./temp")
 	assert.Equal(t, "hello-world", destination(&DownloadToolOptions{Destination: "hello-world"}))
-	assert.Regexp(t, regexp.MustCompile("^temp/[0-9a-f-]{36}$"), destination(&DownloadToolOptions{}))
-	assert.Regexp(t, regexp.MustCompile("^temp/[0-9a-f-]{36}$"), destination(nil))
+	assert.Regexp(t, regexp.MustCompilePOSIX(`^temp[/\\][0-9a-f-]{36}$`), destination(&DownloadToolOptions{}))
+	assert.Regexp(t, regexp.MustCompilePOSIX(`^temp[/\\][0-9a-f-]{36}$`), destination(nil))
 }
 
 func TestEnsureDestDir(t *testing.T) {
@@ -39,7 +39,9 @@ func TestEnsureDestDir(t *testing.T) {
 	defer os.Remove(dir)
 	assert.NoError(t, ensureDestDir(filepath.Join(dir, "some-file")))
 	assert.NoError(t, ensureDestDir(filepath.Join(dir, "some-file")))
-	assert.Error(t, ensureDestDir("/some-non-existing-dir/some-file"))
+	if runtime.GOOS != "windows" {
+		assert.Error(t, ensureDestDir("/some-non-existing-dir/some-file"))
+	}
 }
 
 func TestEnsureDestNotExists(t *testing.T) {
