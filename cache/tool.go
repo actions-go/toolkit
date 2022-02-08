@@ -48,6 +48,7 @@ func destination(options *DownloadToolOptions) string {
 }
 
 func ensureDestDir(dest string) error {
+	fmt.Println(dest)
 	destDir := filepath.Dir(dest)
 	if destDir == "" {
 		return nil
