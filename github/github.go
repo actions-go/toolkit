@@ -38,7 +38,7 @@ func NewClient() *github.Client {
 		)
 		httpClient = oauth2.NewClient(context.Background(), ts)
 	}
-	if _, ok := os.LookupEnv("GITHUB_SERVER_URL"); !ok {
+	if server, ok := os.LookupEnv("GITHUB_SERVER_URL"); !ok || server == "https://github.com" {
 		return github.NewClient(httpClient)
 	}
 	client, err := github.NewEnterpriseClient(os.Getenv("GITHUB_SERVER_URL"), os.Getenv("GITHUB_SERVER_URL"), httpClient)
