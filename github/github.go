@@ -38,7 +38,14 @@ func NewClient() *github.Client {
 		)
 		httpClient = oauth2.NewClient(context.Background(), ts)
 	}
-	return github.NewClient(httpClient)
+	if server, ok := os.LookupEnv("GITHUB_SERVER_URL"); !ok || server == "https://github.com" {
+		return github.NewClient(httpClient)
+	}
+	client, err := github.NewEnterpriseClient(os.Getenv("GITHUB_SERVER_URL"), os.Getenv("GITHUB_SERVER_URL"), httpClient)
+	if err != nil {
+		core.Errorf("failed to initialise GitHub client: %v", err)
+	}
+	return client
 }
 
 var GitHub = NewClient()
