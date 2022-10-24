@@ -6,7 +6,7 @@ require (
 	github.com/Masterminds/semver/v3 v3.1.1
 	github.com/google/go-github/v42 v42.0.0
 	github.com/google/uuid v1.3.0
-	github.com/stretchr/testify v1.7.4
+	github.com/stretchr/testify v1.8.1
 	golang.org/x/oauth2 v0.0.0-20211104180415-d3ed0bb246c8
 )
 
