@@ -1,10 +1,32 @@
 package core
 
 import (
+	"os"
+	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
+
+func TestFormatOutput(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("This test only runs on unix with \\n line separator")
+	}
+	assert.Equal(t, "my-name<<_GitHubActionsGoFileCommandDelimeter_\nmy-value\n_GitHubActionsGoFileCommandDelimeter_\n", formatOutput("my-name", "my-value"))
+}
+
+func TestOutputTasks(t *testing.T) {
+	if _, ok := os.LookupEnv("ACTIONS_OUTPUT_SET"); ok {
+		// state is only available in pre and post actions:
+		// https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#sending-values-to-the-pre-and-post-actions
+		// assert.Equal(t, "my-state-value", GetState("my-state"))
+		assert.Equal(t, "my-output-value", os.Getenv("my_output"))
+		assert.Equal(t, "my-env-value", os.Getenv("my_env"))
+	}
+	SaveState("my-state", "my-state-value")
+	ExportVariable("my_env", "my-env-value")
+	SetOutput("my-output", "my-output-value")
+}
 
 func TestGetInput(t *testing.T) {
 	t.Run("when environment variable is not net", func(t *testing.T) {

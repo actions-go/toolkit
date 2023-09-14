@@ -22,7 +22,7 @@ jobs:
       id: gofmt
       run: |
         gofmt -w .
-        echo ::set-output name=formatted_files::$(git status -s -uno | wc -l)
+        echo "formatted_files=$(git status -s -uno | wc -l)" >> $GITHUB_OUTPUT
 
     - name: push formatting fixes
       if: steps.gofmt.outputs.formatted_files > 0
@@ -62,8 +62,16 @@ jobs:
       run: go mod download
 
     - name: run tests
-      if: ${{ matrix.os }} != "windows-latest"
+      id: tests
       env:
         # unauthenticated calls have lower limits than authenticated ones
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: go test -v -race ${{ matrix.coverageArgs }} ./...
+
+    - name: run tests with inputs
+      env:
+        ACTIONS_OUTPUT_SET: "true"
+        # unauthenticated calls have lower limits than authenticated ones
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        my_output: "${{ steps.tests.outputs.my-output }}"
+      run: go test -v -run TestOutputTasks ./core/...
