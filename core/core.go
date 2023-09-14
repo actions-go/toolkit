@@ -168,10 +168,11 @@ func EndGroup() {
 
 // Group wrap an asynchronous function call in a group, all logs of the function will be collapsed after completion
 func Group(name string, f func()) func() {
+	StartGroup(name)
+	defer EndGroup()
+	f()
 	return func() {
-		StartGroup(name)
-		defer EndGroup()
-		f()
+		Warning("Group returned function is kept for backward compatibility only. The grouping is now effective as soon as the function is called")
 	}
 }
 
