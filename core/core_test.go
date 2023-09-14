@@ -1,12 +1,37 @@
 package core
 
 import (
+	"bytes"
 	"os"
 	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
+
+func TestStopCommand(t *testing.T) {
+	defer func() {
+		stdout = os.Stdout
+	}()
+	WithoutCommands("temporary", func() {
+		Error("this should not make the test to fail")
+	})
+	out := bytes.Buffer{}
+	stdout = &out
+
+	t.Run("stop command is written on stdout (test written for unix only)", func(t *testing.T) {
+		if runtime.GOOS == "windows" {
+			t.Skip("This test only runs on unix with \\n line separator")
+		}
+		called := false
+		WithoutCommands("temporary", func() {
+			called = true
+			Error("en-error")
+		})
+		assert.True(t, called)
+		assert.Equal(t, "::stop-commands::temporary\n::error::en-error\n::temporary::\n", out.String())
+	})
+}
 
 func TestFormatOutput(t *testing.T) {
 	if runtime.GOOS == "windows" {
