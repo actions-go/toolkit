@@ -47,17 +47,28 @@ func IssueCommand(kind string, properties map[string]string, message string) {
 
 // issueFileCommand implements stores the command in a file
 // see https://github.com/actions/toolkit/pull/571/files#diff-9ce6eb99f5fb5529e795254801e03ae56d67d3d5fcbec635f91e9a8a61ad8b64R10
-func issueFileCommand(command string, message string) error {
+func issueFileCommandWithPerm(command string, message string, flag int, perm os.FileMode) error {
 	path, ok := os.LookupEnv(command)
 	if ok {
-		fd, err := os.OpenFile(path, os.O_RDWR, 0)
+		fd, err := os.OpenFile(path, flag, perm)
 		if err != nil {
 			return err
 		}
+		defer fd.Close()
 		fmt.Fprintln(fd, message)
 		return nil
 	}
 	return fmt.Errorf("unable to find command file %s", command)
+}
+
+// issueFileCommand implements stores the command in a file
+// see https://github.com/actions/toolkit/pull/571/files#diff-9ce6eb99f5fb5529e795254801e03ae56d67d3d5fcbec635f91e9a8a61ad8b64R10
+func issueFileCommand(command string, message string) error {
+	err := issueFileCommandWithPerm(command, message, os.O_APPEND|os.O_RDWR, 0)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 type command struct {

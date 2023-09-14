@@ -7,7 +7,37 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
+
+func TestTestSummary(t *testing.T) {
+	t.Run("integrated with Github Actions (it should appear on the run)", func(t *testing.T) {
+		AddStepSummary("and a new line")
+		DeleteStepSummary()
+		AddStepSummary("this content should be overridden")
+		ReplaceStepSummary("this is the new content")
+		AddStepSummary("and a new line")
+	})
+	t.Run("with content check", func(t *testing.T) {
+		fd, err := os.CreateTemp("", "summary")
+		require.NoError(t, err)
+		name := fd.Name()
+		t.Cleanup(func() {
+			fd.Close()
+			os.Remove(name)
+		})
+		t.Setenv(GitHubSummaryPathEnvName, name)
+
+		AddStepSummary("and a new line")
+		DeleteStepSummary()
+		AddStepSummary("this content should be overridden")
+		ReplaceStepSummary("this is the new content")
+		AddStepSummary("and a new line")
+		content, err := os.ReadFile(name)
+		require.NoError(t, err)
+		assert.Equal(t, "this is the new content\nand a new line\n", string(content))
+	})
+}
 
 func TestStopCommand(t *testing.T) {
 	defer func() {
