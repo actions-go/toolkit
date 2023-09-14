@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/actions-go/toolkit/core"
 	"github.com/google/go-github/v42/github"
 )
 
@@ -79,15 +80,18 @@ type ActionRepo struct {
 
 // ActionContext contains details on the workflow execution
 type ActionContext struct {
-	Payload   WebhookPayload
-	EventName string
-	SHA       string
-	Ref       string
-	Workflow  string
-	Action    string
-	Actor     string
-	Issue     ActionIssue
-	Repo      ActionRepo
+	Payload           WebhookPayload
+	EventName         string
+	SHA               string
+	Ref               string
+	Workflow          string
+	Action            string
+	Actor             string
+	Issue             ActionIssue
+	Repo              ActionRepo
+	OutputFilePath    string
+	StateFilePath     string
+	ExportEnvFilePath string
 }
 
 func noGitHubEvent(path string) {
@@ -109,13 +113,16 @@ func ParseActionEnv() ActionContext {
 		Repo:  getIndex(r, 1),
 	}
 	ctx := ActionContext{
-		EventName: os.Getenv("GITHUB_EVENT_NAME"),
-		SHA:       os.Getenv("GITHUB_SHA"),
-		Ref:       os.Getenv("GITHUB_REF"),
-		Workflow:  os.Getenv("GITHUB_WORKFLOW"),
-		Action:    os.Getenv("GITHUB_ACTION"),
-		Actor:     os.Getenv("GITHUB_ACTOR"),
-		Repo:      repo,
+		EventName:         os.Getenv("GITHUB_EVENT_NAME"),
+		SHA:               os.Getenv("GITHUB_SHA"),
+		Ref:               os.Getenv("GITHUB_REF"),
+		Workflow:          os.Getenv("GITHUB_WORKFLOW"),
+		Action:            os.Getenv("GITHUB_ACTION"),
+		Actor:             os.Getenv("GITHUB_ACTOR"),
+		OutputFilePath:    os.Getenv(core.GitHubOutputFilePathEnvName),
+		StateFilePath:     os.Getenv(core.GitHubStateFilePathEnvName),
+		ExportEnvFilePath: os.Getenv(core.GitHubExportEnvFilePathEnvName),
+		Repo:              repo,
 		Issue: ActionIssue{
 			Owner: repo.Owner,
 			Repo:  repo.Repo,

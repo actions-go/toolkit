@@ -2,28 +2,60 @@ package core
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"strings"
 	"sync"
 )
 
 const (
+	delimiter = "_GitHubActionsGoFileCommandDelimeter_"
+
 	// StatusFailed is returned by Status() in case this action has been marked as failed
 	StatusFailed = 1
 	// StatusSuccess is returned by Status() in case this action has not been marked as failed. By default an action is claimed as successful
 	StatusSuccess = 0
+
+	GitHubOutputFilePathEnvName    = "GITHUB_OUTPUT"
+	GitHubStateFilePathEnvName     = "GITHUB_STATE"
+	GitHubExportEnvFilePathEnvName = "GITHUB_ENV"
+	GitHubPathFilePathEnvName      = "GITHUB_PATH"
 )
 
 var (
 	status       = StatusSuccess
 	statusAccess = &sync.Mutex{}
 	lookupEnv    = os.LookupEnv
+	open         = func(path string, flag int, perm os.FileMode) (File, error) {
+		fd, err := os.OpenFile(path, flag, perm)
+		if err != nil {
+			return nil, err
+		}
+		return fd, nil
+	}
 )
+
+type File interface {
+	io.Reader
+	io.Writer
+	io.Closer
+}
+
+func formatOutput(name, value string) string {
+	return strings.Join(
+		[]string{
+			fmt.Sprintf("%s<<%s", name, delimiter),
+			value,
+			delimiter,
+			"",
+		},
+		EOF,
+	)
+}
 
 // ExportVariable sets the environment varaible name (for this action and future actions)
 func ExportVariable(name, value string) {
-	const delimiter = "_GitHubActionsFileCommandDelimeter_"
-	if err := issueFileCommand("ENV", fmt.Sprintf("%s<<%s%s%s%s%s", name, delimiter, EOF, value, delimiter, EOF)); err != nil {
+	if err := issueFileCommand(GitHubExportEnvFilePathEnvName, formatOutput(name, value)); err != nil {
 		IssueCommand("set-env", map[string]string{"name": name}, value)
 	}
 	os.Setenv(name, value)
@@ -36,7 +68,7 @@ func SetSecret(secret string) {
 
 // AddPath prepends inputPath to the PATH (for this action and future actions)
 func AddPath(path string) {
-	if err := issueFileCommand("PATH", path); err != nil {
+	if err := issueFileCommand(GitHubPathFilePathEnvName, path); err != nil {
 		Issue("add-path", path)
 	}
 	// TODO js: process.env['PATH'] = `${inputPath}${path.delimiter}${process.env['PATH']}`
@@ -65,7 +97,10 @@ func GetInputOrDefault(name, dflt string) string {
 
 // SetOutput sets the value of an output for future actions
 func SetOutput(name, value string) {
-	IssueCommand("set-output", map[string]string{"name": name}, value)
+	if err := issueFileCommand(GitHubOutputFilePathEnvName, formatOutput(name, value)); err != nil {
+		Warningf("did not find output file from environment variable %s, falling back to the deprecated command implementation", GitHubOutputFilePathEnvName)
+		IssueCommand("set-output", map[string]string{"name": name}, value)
+	}
 }
 
 // SetFailedf sets the action status to failed and sets an error message
@@ -142,7 +177,10 @@ func Group(name string, f func()) func() {
 
 // SaveState saves state for current action, the state can only be retrieved by this action's post job execution.
 func SaveState(name, value string) {
-	IssueCommand("save-state", map[string]string{"name": name}, value)
+	if err := issueFileCommand(GitHubStateFilePathEnvName, formatOutput(name, value)); err != nil {
+		Warningf("did not find state file from environment variable %s, falling back to the deprecated command implementation", GitHubStateFilePathEnvName)
+		IssueCommand("save-state", map[string]string{"name": name}, value)
+	}
 }
 
 // GetState gets the value of an state set by this action's main execution.
