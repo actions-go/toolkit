@@ -20,6 +20,7 @@ const (
 	GitHubStateFilePathEnvName     = "GITHUB_STATE"
 	GitHubExportEnvFilePathEnvName = "GITHUB_ENV"
 	GitHubPathFilePathEnvName      = "GITHUB_PATH"
+	GitHubSummaryPathEnvName       = "GITHUB_STEP_SUMMARY"
 )
 
 var (
@@ -168,10 +169,11 @@ func EndGroup() {
 
 // Group wrap an asynchronous function call in a group, all logs of the function will be collapsed after completion
 func Group(name string, f func()) func() {
+	StartGroup(name)
+	defer EndGroup()
+	f()
 	return func() {
-		StartGroup(name)
-		defer EndGroup()
-		f()
+		Warning("Group returned function is kept for backward compatibility only. The grouping is now effective as soon as the function is called")
 	}
 }
 
@@ -213,4 +215,38 @@ func GetState(name string) string {
 // IsDebug returns whether the github actions is currently under debug
 func IsDebug() bool {
 	return os.Getenv("RUNNER_DEBUG") == "1"
+}
+
+// AddStepSummary adds some custom Markdown for each job so that it will be displayed on the summary page of a workflow run.
+// You can use job summaries to display and group unique content, such as test result summaries, so that someone viewing the
+// result of a workflow run doesn't need to go into the logs to see important information related to the run, such as failures.
+// see: https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#adding-a-job-summary
+func AddStepSummary(summary string) {
+	// os.O_CREATE: If pathname does not exist, create it as a regular file.
+	if err := issueFileCommandWithPerm(GitHubSummaryPathEnvName, summary, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0644); err != nil {
+		Warningf("failed to add step summary: %v", err)
+	}
+}
+
+// ReplaceStepSummary clear all content for the current step
+// see: https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#overwriting-job-summaries
+func ReplaceStepSummary(summary string) {
+	// os.O_CREATE: If pathname does not exist, create it as a regular file.
+	if err := issueFileCommandWithPerm(GitHubSummaryPathEnvName, summary, os.O_CREATE|os.O_TRUNC|os.O_RDWR, 0); err != nil {
+		Warningf("failed to replace step summary: %v", err)
+	}
+}
+
+// DeleteStepSummary completely remove a summary for the current step
+// see: https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#removing-job-summaries
+func DeleteStepSummary() {
+	path, ok := os.LookupEnv(GitHubSummaryPathEnvName)
+	if ok {
+		err := os.Remove(path)
+		if err != nil && !os.IsNotExist(err) {
+			Warningf("failed to delete step summary: %v", err)
+		}
+	} else {
+		Warningf("failed to replace step summary: %v", fmt.Errorf("unable to find command file %s", GitHubSummaryPathEnvName))
+	}
 }
