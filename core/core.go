@@ -175,6 +175,28 @@ func Group(name string, f func()) func() {
 	}
 }
 
+// StopCommands Stops processing any workflow commands.
+// Commands will be resumed when calling StartCommands(endToken)
+// This special command allows you to log anything without accidentally running a workflow command.
+// For example, you could stop logging to output an entire script that has comments.
+func StopCommands(endToken string) {
+	Issue("stop-commands", endToken)
+}
+
+// StartCommands enables commands stopped until the endToken
+func StartCommands(endToken string) {
+	Issue(endToken)
+}
+
+// WithoutCommands executes the functions ensuring it does not execute any github actions commands.
+// This special command allows you to log anything without accidentally running a workflow command.
+// For example, you could stop logging to output an entire script that has comments.
+func WithoutCommands(endToken string, f func()) {
+	StopCommands(endToken)
+	defer StartCommands(endToken)
+	f()
+}
+
 // SaveState saves state for current action, the state can only be retrieved by this action's post job execution.
 func SaveState(name, value string) {
 	if err := issueFileCommand(GitHubStateFilePathEnvName, formatOutput(name, value)); err != nil {
