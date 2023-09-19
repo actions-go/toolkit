@@ -1,6 +1,7 @@
 package core
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -21,6 +22,8 @@ const (
 	GitHubExportEnvFilePathEnvName = "GITHUB_ENV"
 	GitHubPathFilePathEnvName      = "GITHUB_PATH"
 	GitHubSummaryPathEnvName       = "GITHUB_STEP_SUMMARY"
+
+	ActionsGoJsonInputEnvName = "ACTION_GO_INPUTS"
 )
 
 var (
@@ -34,6 +37,32 @@ var (
 		}
 		return fd, nil
 	}
+	jsonInputs = func() map[string]string {
+		r := map[string]string{}
+		encoded, ok := os.LookupEnv(ActionsGoJsonInputEnvName)
+		if ok {
+			raw := map[string]interface{}{}
+			err := json.Unmarshal([]byte(encoded), &raw)
+			if err != nil {
+				Warningf("Unable to decode action-go inputs: %v", err)
+				return r
+			}
+			for k, v := range raw {
+				switch s := v.(type) {
+				case string:
+					r[k] = s
+				default:
+					data, err := json.Marshal(v)
+					if err != nil {
+						Debugf("unable to serialise %s input: %v", k, err)
+						continue
+					}
+					r[k] = string(data)
+				}
+			}
+		}
+		return r
+	}()
 )
 
 type File interface {
@@ -84,7 +113,15 @@ func GetBoolInput(name string) bool {
 // GetInput gets the value of an input.  The value is also trimmed.
 func GetInput(name string) (string, bool) {
 	val, ok := lookupEnv(strings.ToUpper("INPUT_" + strings.Replace(name, " ", "_", -1)))
-	return strings.TrimSpace(val), ok
+	if !ok {
+		Debug("Did not find the input using plain gha input format, trying the actions-go one")
+		val, ok := jsonInputs[name]
+		if ok {
+			return strings.TrimSpace(val), true
+		}
+		return "", false
+	}
+	return strings.TrimSpace(val), true
 }
 
 // GetInputOrDefault gets the value of an input. If value is not found, a default value is used
