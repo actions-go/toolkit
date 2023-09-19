@@ -84,7 +84,12 @@ func TestOutputTasks(t *testing.T) {
 }
 
 func TestGetInput(t *testing.T) {
+
 	t.Run("when environment variable is not net", func(t *testing.T) {
+		originalLookupEnv := lookupEnv
+		t.Cleanup(func() {
+			lookupEnv = originalLookupEnv
+		})
 		lookupEnv = func(name string) (string, bool) {
 			t.Run("environment variable lookup should be uppercase without space", func(t *testing.T) {
 				assert.Equal(t, "INPUT_SOME-INPUT_WITH-SPACE", name)
@@ -96,6 +101,10 @@ func TestGetInput(t *testing.T) {
 		assert.Equal(t, "", v)
 	})
 	t.Run("when environment variable is not net", func(t *testing.T) {
+		originalLookupEnv := lookupEnv
+		t.Cleanup(func() {
+			lookupEnv = originalLookupEnv
+		})
 		lookupEnv = func(name string) (string, bool) {
 			t.Run("environment variable lookup should be uppercase without space", func(t *testing.T) {
 				assert.Equal(t, "INPUT_SOME-INPUT_WITH-SPACE", name)
@@ -103,6 +112,27 @@ func TestGetInput(t *testing.T) {
 			return " some value that needs to be Trimmed \n", true
 		}
 		v, ok := GetInput("some-input with-space")
+		assert.True(t, ok)
+		assert.Equal(t, "some value that needs to be Trimmed", v)
+	})
+
+	t.Run("Falls back to actions-go input", func(t *testing.T) {
+		originalInputs := jsonInputs
+		t.Cleanup(func() {
+			jsonInputs = originalInputs
+		})
+		jsonInputs = map[string]string{"some-input with-space": " some json value that needs to be Trimmed \n"}
+		v, ok := GetInput("some-input with-space")
+		assert.True(t, ok)
+		assert.Equal(t, "some json value that needs to be Trimmed", v)
+
+		lookupEnv = func(name string) (string, bool) {
+			t.Run("environment variable lookup should be uppercase without space", func(t *testing.T) {
+				assert.Equal(t, "INPUT_SOME-INPUT_WITH-SPACE", name)
+			})
+			return " some value that needs to be Trimmed \n", true
+		}
+		v, ok = GetInput("some-input with-space")
 		assert.True(t, ok)
 		assert.Equal(t, "some value that needs to be Trimmed", v)
 	})
