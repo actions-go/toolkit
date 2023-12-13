@@ -5,7 +5,7 @@ go 1.19
 require (
 	github.com/Masterminds/semver/v3 v3.2.1
 	github.com/google/go-github/v42 v42.0.0
-	github.com/google/uuid v1.3.1
+	github.com/google/uuid v1.5.0
 	github.com/stretchr/testify v1.8.4
 	golang.org/x/oauth2 v0.13.0
 )
