@@ -168,6 +168,7 @@ func TestSummaryAddImageWithDimensions(t *testing.T) {
 }
 
 func TestSummaryNoEnvVar(t *testing.T) {
+	t.Setenv(GitHubSummaryPathEnvName, "")
 	s := &Summary{}
 	s.AddRaw("content")
 	err := s.Write()
