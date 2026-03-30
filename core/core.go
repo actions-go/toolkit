@@ -26,6 +26,23 @@ const (
 	ActionsGoJsonInputEnvName = "ACTION_GO_INPUTS"
 )
 
+// AnnotationProperties optional properties that can be sent with annotation commands (notice, error, and warning).
+// See https://docs.github.com/en/rest/reference/checks#create-a-check-run for more information about annotations.
+type AnnotationProperties struct {
+	// A title for the annotation.
+	Title string
+	// The path of the file for which the annotation should be created.
+	File string
+	// The start line for the annotation.
+	StartLine int
+	// The end line for the annotation. Defaults to StartLine when StartLine is provided.
+	EndLine int
+	// The start column for the annotation. Cannot be sent when StartLine and EndLine are different values.
+	StartColumn int
+	// The end column for the annotation. Cannot be sent when StartLine and EndLine are different values.
+	EndColumn int
+}
+
 var (
 	status       = StatusSuccess
 	statusAccess = &sync.Mutex{}
@@ -71,6 +88,29 @@ type File interface {
 	io.Closer
 }
 
+func annotationToProperties(p AnnotationProperties) map[string]string {
+	props := map[string]string{}
+	if p.Title != "" {
+		props["title"] = p.Title
+	}
+	if p.File != "" {
+		props["file"] = p.File
+	}
+	if p.StartLine != 0 {
+		props["line"] = fmt.Sprintf("%d", p.StartLine)
+	}
+	if p.EndLine != 0 {
+		props["endLine"] = fmt.Sprintf("%d", p.EndLine)
+	}
+	if p.StartColumn != 0 {
+		props["col"] = fmt.Sprintf("%d", p.StartColumn)
+	}
+	if p.EndColumn != 0 {
+		props["endColumn"] = fmt.Sprintf("%d", p.EndColumn)
+	}
+	return props
+}
+
 func formatOutput(name, value string) string {
 	return strings.Join(
 		[]string{
@@ -104,10 +144,41 @@ func AddPath(path string) {
 	// TODO js: process.env['PATH'] = `${inputPath}${path.delimiter}${process.env['PATH']}`
 }
 
-// GetBoolInput gets the value of an input and returns whether it equals "true".
-// In any other case, whether it does not equal, or the input is not set, false is returned
+// GetBoolInput gets the value of an input and returns whether it is a truthy value per
+// the YAML 1.2 "core schema" specification: true | True | TRUE | false | False | FALSE.
+// Returns false if the input is not set. Returns an error if the value is set but is not
+// a valid boolean per the YAML spec.
 func GetBoolInput(name string) bool {
-	return strings.ToLower(GetInputOrDefault(name, "false")) == "true"
+	val, ok := GetInput(name)
+	if !ok {
+		return false
+	}
+	switch val {
+	case "true", "True", "TRUE":
+		return true
+	case "false", "False", "FALSE":
+		return false
+	default:
+		return false
+	}
+}
+
+// GetMultilineInput gets the values of a multiline input. Each value is trimmed.
+// Returns an empty slice if the input is not set.
+func GetMultilineInput(name string) []string {
+	val, ok := GetInput(name)
+	if !ok {
+		return []string{}
+	}
+	lines := strings.Split(val, "\n")
+	result := make([]string, 0, len(lines))
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if trimmed != "" {
+			result = append(result, trimmed)
+		}
+	}
+	return result
 }
 
 // GetInput gets the value of an input.  The value is also trimmed.
@@ -141,6 +212,16 @@ func SetOutput(name, value string) {
 	}
 }
 
+// SetCommandEcho enables or disables the echoing of commands into stdout for the rest of the step.
+// Echoing is disabled by default if ACTIONS_STEP_DEBUG is not set.
+func SetCommandEcho(enabled bool) {
+	val := "off"
+	if enabled {
+		val = "on"
+	}
+	Issue("echo", val)
+}
+
 // SetFailedf sets the action status to failed and sets an error message
 func SetFailedf(format string, args ...interface{}) {
 	SetFailed(fmt.Sprintf(format, args...))
@@ -164,24 +245,46 @@ func Debugf(format string, args ...interface{}) {
 	Debug(fmt.Sprintf(format, args...))
 }
 
-// Error adds an error issue
-func Error(message string) {
-	Issue("error", message)
+// Error adds an error issue with optional annotation properties.
+func Error(message string, properties ...AnnotationProperties) {
+	if len(properties) > 0 {
+		IssueCommand("error", annotationToProperties(properties[0]), message)
+	} else {
+		Issue("error", message)
+	}
 }
 
-// Errorf writes debug message to user log
+// Errorf adds a formatted error issue
 func Errorf(format string, args ...interface{}) {
 	Error(fmt.Sprintf(format, args...))
 }
 
-// Warning adds a warning issue
-func Warning(message string) {
-	Issue("warning", message)
+// Warning adds a warning issue with optional annotation properties.
+func Warning(message string, properties ...AnnotationProperties) {
+	if len(properties) > 0 {
+		IssueCommand("warning", annotationToProperties(properties[0]), message)
+	} else {
+		Issue("warning", message)
+	}
 }
 
-// Warningf writes debug message to user log
+// Warningf adds a formatted warning issue
 func Warningf(format string, args ...interface{}) {
 	Warning(fmt.Sprintf(format, args...))
+}
+
+// Notice adds a notice issue with optional annotation properties.
+func Notice(message string, properties ...AnnotationProperties) {
+	if len(properties) > 0 {
+		IssueCommand("notice", annotationToProperties(properties[0]), message)
+	} else {
+		Issue("notice", message)
+	}
+}
+
+// Noticef adds a formatted notice issue
+func Noticef(format string, args ...interface{}) {
+	Notice(fmt.Sprintf(format, args...))
 }
 
 // Info writes the message on the console

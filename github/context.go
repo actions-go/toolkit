@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/actions-go/toolkit/core"
@@ -87,6 +88,13 @@ type ActionContext struct {
 	Workflow          string
 	Action            string
 	Actor             string
+	Job               string
+	RunAttempt        int64
+	RunNumber         int64
+	RunID             int64
+	ApiUrl            string
+	ServerUrl         string
+	GraphqlUrl        string
 	Issue             ActionIssue
 	Repo              ActionRepo
 	OutputFilePath    string
@@ -105,7 +113,22 @@ func getIndex(a []string, i int) string {
 	return ""
 }
 
-// ParseActionEnv parses the environemnt and extracts the ActionContext on demand. For example in tests
+func parseInt64Env(name string) int64 {
+	v, err := strconv.ParseInt(os.Getenv(name), 10, 64)
+	if err != nil {
+		return 0
+	}
+	return v
+}
+
+func getenvOrDefault(name, defaultVal string) string {
+	if v := os.Getenv(name); v != "" {
+		return v
+	}
+	return defaultVal
+}
+
+// ParseActionEnv parses the environment and extracts the ActionContext on demand. For example in tests
 func ParseActionEnv() ActionContext {
 	r := strings.SplitN(os.Getenv("GITHUB_REPOSITORY"), "/", 2)
 	repo := ActionRepo{
@@ -119,6 +142,13 @@ func ParseActionEnv() ActionContext {
 		Workflow:          os.Getenv("GITHUB_WORKFLOW"),
 		Action:            os.Getenv("GITHUB_ACTION"),
 		Actor:             os.Getenv("GITHUB_ACTOR"),
+		Job:               os.Getenv("GITHUB_JOB"),
+		RunAttempt:        parseInt64Env("GITHUB_RUN_ATTEMPT"),
+		RunNumber:         parseInt64Env("GITHUB_RUN_NUMBER"),
+		RunID:             parseInt64Env("GITHUB_RUN_ID"),
+		ApiUrl:            getenvOrDefault("GITHUB_API_URL", "https://api.github.com"),
+		ServerUrl:         getenvOrDefault("GITHUB_SERVER_URL", "https://github.com"),
+		GraphqlUrl:        getenvOrDefault("GITHUB_GRAPHQL_URL", "https://api.github.com/graphql"),
 		OutputFilePath:    os.Getenv(core.GitHubOutputFilePathEnvName),
 		StateFilePath:     os.Getenv(core.GitHubStateFilePathEnvName),
 		ExportEnvFilePath: os.Getenv(core.GitHubExportEnvFilePathEnvName),
