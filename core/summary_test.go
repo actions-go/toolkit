@@ -79,34 +79,34 @@ func TestSummaryStringify(t *testing.T) {
 func TestSummaryAddHeading(t *testing.T) {
 	_, s := withSummaryFile(t)
 	s.AddHeading("Title", 1)
-	assert.Equal(t, "<h1>Title</h1>\n", s.Stringify())
+	assert.Equal(t, "<h1>Title</h1>"+EOF, s.Stringify())
 	s.EmptyBuffer()
 	s.AddHeading("Sub", 3)
-	assert.Equal(t, "<h3>Sub</h3>\n", s.Stringify())
+	assert.Equal(t, "<h3>Sub</h3>"+EOF, s.Stringify())
 }
 
 func TestSummaryAddHeadingDefaultLevel(t *testing.T) {
 	_, s := withSummaryFile(t)
 	s.AddHeading("Title")
-	assert.Equal(t, "<h1>Title</h1>\n", s.Stringify())
+	assert.Equal(t, "<h1>Title</h1>"+EOF, s.Stringify())
 }
 
 func TestSummaryAddSeparator(t *testing.T) {
 	_, s := withSummaryFile(t)
 	s.AddSeparator()
-	assert.Equal(t, "<hr>\n", s.Stringify())
+	assert.Equal(t, "<hr>"+EOF, s.Stringify())
 }
 
 func TestSummaryAddBreak(t *testing.T) {
 	_, s := withSummaryFile(t)
 	s.AddBreak()
-	assert.Equal(t, "<br>\n", s.Stringify())
+	assert.Equal(t, "<br>"+EOF, s.Stringify())
 }
 
 func TestSummaryAddQuote(t *testing.T) {
 	_, s := withSummaryFile(t)
 	s.AddQuote("some quote")
-	assert.Equal(t, "<blockquote>some quote</blockquote>\n", s.Stringify())
+	assert.Equal(t, "<blockquote>some quote</blockquote>"+EOF, s.Stringify())
 	s.EmptyBuffer()
 	s.AddQuote("cited", "https://example.com")
 	assert.Contains(t, s.Stringify(), `cite="https://example.com"`)
@@ -115,16 +115,16 @@ func TestSummaryAddQuote(t *testing.T) {
 func TestSummaryAddLink(t *testing.T) {
 	_, s := withSummaryFile(t)
 	s.AddLink("click me", "https://example.com")
-	assert.Equal(t, `<a href="https://example.com">click me</a>`+"\n", s.Stringify())
+	assert.Equal(t, `<a href="https://example.com">click me</a>`+EOF, s.Stringify())
 }
 
 func TestSummaryAddList(t *testing.T) {
 	_, s := withSummaryFile(t)
 	s.AddList([]string{"a", "b", "c"})
-	assert.Equal(t, "<ul><li>a</li><li>b</li><li>c</li></ul>\n", s.Stringify())
+	assert.Equal(t, "<ul><li>a</li><li>b</li><li>c</li></ul>"+EOF, s.Stringify())
 	s.EmptyBuffer()
 	s.AddList([]string{"1", "2"}, true)
-	assert.Equal(t, "<ol><li>1</li><li>2</li></ol>\n", s.Stringify())
+	assert.Equal(t, "<ol><li>1</li><li>2</li></ol>"+EOF, s.Stringify())
 }
 
 func TestSummaryAddTable(t *testing.T) {
@@ -142,7 +142,7 @@ func TestSummaryAddTable(t *testing.T) {
 func TestSummaryAddDetails(t *testing.T) {
 	_, s := withSummaryFile(t)
 	s.AddDetails("label", "content")
-	assert.Equal(t, "<details><summary>label</summary>content</details>\n", s.Stringify())
+	assert.Equal(t, "<details><summary>label</summary>content</details>"+EOF, s.Stringify())
 }
 
 func TestSummaryAddCodeBlock(t *testing.T) {
