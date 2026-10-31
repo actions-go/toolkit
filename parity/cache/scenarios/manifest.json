@@ -105,7 +105,7 @@
      {"version": "latest", "stable": true, "release_url": "u1", "files": [{"filename": "a", "platform": "linux", "arch": "x64", "download_url": "d"}]}], "x64"]}]},
   {"name": "findFromManifest empty manifest",
    "calls": [{"fn": "findFromManifest", "args": ["*", true, [], "x64"]}]},
-  {"name": "findFromManifest platform version equal to the one of the machine",
+  {"name": "findFromManifest platform version equal to the one of the machine", "requires": ["osversion"],
    "calls": [{"fn": "findFromManifest", "args": ["*", true, [
      {"version": "1.0.0", "stable": true, "release_url": "u1", "files": [
        {"filename": "a", "platform": "linux", "platform_version": "{{osversion}}", "arch": "x64", "download_url": "d"}, {"filename": "a", "platform": "darwin", "platform_version": "{{osversion}}", "arch": "x64", "download_url": "d"}, {"filename": "a", "platform": "win32", "platform_version": "{{osversion}}", "arch": "x64", "download_url": "d"}]}], "x64"]}]},
