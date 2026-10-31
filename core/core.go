@@ -234,7 +234,7 @@ func SetOutput(name, value string) {
 	if err := issueFileCommand(GitHubOutputFilePathEnvName, formatOutput(name, value)); err != nil {
 		// @actions/core writes an empty line before the deprecated command
 		stdoutSetter.Lock()
-		fmt.Fprintln(stdout)
+		fmt.Fprint(stdout, EOF)
 		stdoutSetter.Unlock()
 		IssueCommand("set-output", map[string]string{"name": name}, value)
 	}
@@ -333,7 +333,7 @@ func Noticef(format string, args ...interface{}) {
 
 // Info writes the message on the console
 func Info(message string) {
-	fmt.Println(message)
+	fmt.Print(message + EOF)
 }
 
 // Infof writes debug message to user log
