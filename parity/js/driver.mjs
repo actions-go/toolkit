@@ -52,8 +52,7 @@ const results = {}
 for (const sc of scenarios) {
   results[sc.name] = await run(sc)
 }
-// core.setFailed sets process.exitCode = 1; the exit status is not part of what
-// is compared (the Go package keeps it private), so do not let it fail the driver.
+// run() resets process.exitCode after recording it; make sure the driver itself exits 0
 process.exitCode = 0
 process.stdout.write(JSON.stringify(results))
 
@@ -157,7 +156,9 @@ async function run(sc) {
     process.stdout.write = realWrite
   }
 
-  const out = { stdout, returns, files: {}, env: {} }
+  // core.setFailed sets process.exitCode = 1
+  const out = { stdout, returns, failed: process.exitCode === 1, files: {}, env: {} }
+  process.exitCode = 0
   for (const key of Object.keys(files)) {
     out.files[key] = fs.readFileSync(files[key], 'utf8')
   }

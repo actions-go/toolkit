@@ -250,6 +250,22 @@ func SetCommandEcho(enabled bool) {
 	Issue("echo", val)
 }
 
+// Status returns StatusFailed once SetFailed has been called and StatusSuccess otherwise.
+// It mirrors process.exitCode being set by @actions/core's setFailed.
+func Status() int {
+	statusAccess.Lock()
+	defer statusAccess.Unlock()
+	return status
+}
+
+// ResetStatus marks the action as successful again. It exists for tests that
+// run several scenarios in one process.
+func ResetStatus() {
+	statusAccess.Lock()
+	status = StatusSuccess
+	statusAccess.Unlock()
+}
+
 // SetFailedf sets the action status to failed and sets an error message
 func SetFailedf(format string, args ...interface{}) {
 	SetFailed(fmt.Sprintf(format, args...))
