@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"os"
 	"runtime"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -67,7 +68,15 @@ func TestFormatOutput(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("This test only runs on unix with \\n line separator")
 	}
-	assert.Equal(t, "my-name<<_GitHubActionsGoFileCommandDelimeter_\nmy-value\n_GitHubActionsGoFileCommandDelimeter_", formatOutput("my-name", "my-value"))
+	lines := strings.Split(formatOutput("my-name", "my-value"), "\n")
+	require.Len(t, lines, 3)
+	assert.Regexp(t, `^my-name<<ghadelimiter_[0-9a-f-]{36}$`, lines[0])
+	assert.Equal(t, "my-value", lines[1])
+	assert.Equal(t, strings.TrimPrefix(lines[0], "my-name<<"), lines[2], "the entry ends with the delimiter it opened with")
+}
+
+func TestFormatOutputDelimiterIsUnpredictable(t *testing.T) {
+	assert.NotEqual(t, formatOutput("n", "v"), formatOutput("n", "v"))
 }
 
 func TestOutputTasks(t *testing.T) {
