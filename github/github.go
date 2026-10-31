@@ -29,7 +29,32 @@ func token() string {
 	return ""
 }
 
+var orchestrationIDUnsafe = regexp.MustCompile(`[^a-zA-Z0-9_.-]`)
+
+// UserAgentWithOrchestrationID appends the actions_orchestration_id tag built from
+// ACTIONS_ORCHESTRATION_ID to baseUserAgent. The tag is not added twice.
+func UserAgentWithOrchestrationID(baseUserAgent string) string {
+	id := strings.TrimSpace(os.Getenv("ACTIONS_ORCHESTRATION_ID"))
+	if id == "" {
+		return baseUserAgent
+	}
+	tag := "actions_orchestration_id/" + orchestrationIDUnsafe.ReplaceAllString(id, "_")
+	if strings.Contains(baseUserAgent, tag) {
+		return baseUserAgent
+	}
+	if baseUserAgent != "" {
+		baseUserAgent += " "
+	}
+	return baseUserAgent + tag
+}
+
 func NewClient() *github.Client {
+	client := newClient()
+	client.UserAgent = UserAgentWithOrchestrationID(client.UserAgent)
+	return client
+}
+
+func newClient() *github.Client {
 	token := token()
 	httpClient := http.DefaultClient
 	if token != "" {

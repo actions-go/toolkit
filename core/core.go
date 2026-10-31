@@ -22,6 +22,7 @@ const (
 	GitHubExportEnvFilePathEnvName = "GITHUB_ENV"
 	GitHubPathFilePathEnvName      = "GITHUB_PATH"
 	GitHubSummaryPathEnvName       = "GITHUB_STEP_SUMMARY"
+	GitHubArtifactsEnvName         = "GITHUB_ARTIFACTS"
 
 	ActionsGoJsonInputEnvName = "ACTION_GO_INPUTS"
 )
