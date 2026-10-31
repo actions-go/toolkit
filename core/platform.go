@@ -1,6 +1,8 @@
 package core
 
 import (
+	"errors"
+	"fmt"
 	"os/exec"
 	"runtime"
 	"strings"
@@ -8,7 +10,7 @@ import (
 
 // Platform is the current operating system platform (e.g. "linux", "darwin", "windows").
 // Mirrors os.platform() from Node.js.
-var Platform = runtime.GOOS
+var Platform = nodePlatform(runtime.GOOS)
 
 // Arch is the current CPU architecture (e.g. "x64", "arm64").
 // Mirrors os.arch() from Node.js — uses JavaScript naming conventions.
@@ -105,21 +107,45 @@ func getLinuxInfo() (name, version string, err error) {
 	return name, version, nil
 }
 
+// nodePlatform maps Go's GOOS to Node.js os.platform() naming.
+func nodePlatform(goos string) string {
+	switch goos {
+	case "windows":
+		return "win32"
+	case "solaris":
+		return "sunos"
+	default:
+		return goos
+	}
+}
+
 // jsArch maps Go's GOARCH to Node.js os.arch() naming conventions.
 func jsArch() string {
-	switch runtime.GOARCH {
+	return nodeArch(runtime.GOARCH)
+}
+
+func nodeArch(goarch string) string {
+	switch goarch {
 	case "386":
-		return "x32"
+		return "ia32"
 	case "amd64":
 		return "x64"
+	case "mipsle":
+		return "mipsel"
+	case "ppc64le":
+		return "ppc64"
 	default:
-		return runtime.GOARCH
+		return goarch
 	}
 }
 
 // runCommand executes a command and returns its combined stdout output.
 var runCommand = func(name string, args ...string) (string, error) {
 	out, err := exec.Command(name, args...).Output()
+	if errors.Is(err, exec.ErrNotFound) {
+		// same text as @actions/io, which @actions/core uses to run the command
+		return "", fmt.Errorf("Unable to locate executable file: %s. Please verify either the file path exists or the file can be found within a directory specified by the PATH environment variable. Also check the file mode to verify the file is executable.", name) //nolint:staticcheck
+	}
 	if err != nil {
 		return "", err
 	}

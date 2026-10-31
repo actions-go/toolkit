@@ -79,7 +79,12 @@ type command struct {
 }
 
 func (c *command) String() string {
-	s := cmdString + c.command
+	kind := c.command
+	if kind == "" {
+		// same placeholder as @actions/core, so the runner reports a recognisable command
+		kind = "missing.command"
+	}
+	s := cmdString + kind
 	sep := " "
 	for _, key := range sortedPropertyKeys(c.properties) {
 		s += sep + key + "=" + escape(c.properties[key])
