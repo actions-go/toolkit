@@ -51,6 +51,22 @@ M1 (merged, #94) covered the simple `core` API. Phase 2 sub-goals, built in para
 
 Out of scope by construction: Go-only helpers with no JS equivalent (`DownloadSelectedRepositoryFiles`, `MatchesOneOf`, `core/artifacts.go`, actions-go JSON inputs). The package name `cache` is tool-cache, not @actions/cache.
 
+## What phase 2 taught (not visible in the diffs)
+
+Results: `core` 291 scenarios, `github` 70, `cache` 217. Each comparison found real Go bugs the existing unit tests had encoded as expected behaviour (the old platform tests asserted constants against themselves).
+
+- **The OS matrix found a bug class Linux cannot show.** Go ended commands, file commands and `Info` with `\n` (`Println`); the reference uses `os.EOL`. 170 of 291 `core` scenarios failed on the first Windows run, and `github` printed one `\n` message too. Fixed by writing the `EOF` constant. Unit tests that hard-coded `\n` (`TestIssueCommand`, summary, artifacts) then failed on Windows: after a line-ending change, grep the tests for `\n` too.
+- **Windows-only scenario skipped without analysis:** `platform getDetails without PATH` (`skipOS` in the scenario, reason printed). The cause is probably how PowerShell is found without PATH; nobody looked.
+- **Decision kept on purpose:** `AddPath` with no `PATH` gives `<dir>` in Go; the reference gives `<dir>:undefined`. Documented in `parity/known-divergences.json`.
+- **Public-API changes the comparison forced:** `CacheFile` on a directory now errors; the `github` client sends `Authorization: token` instead of `Bearer`; `GITHUB_REPOSITORY` wins over `payload.repository`; multi-line file commands use a random delimiter (the constant one let a value forge extra outputs).
+- **Harness traps.** `core.setFailed` sets `process.exitCode`, so the JS driver exited 1 with empty stderr until the exit code was recorded (`failed`) and reset per scenario. A harness reporting nothing looked like a harness bug, not a reference behaviour. `stopCommands`/`startCommands` are not exported by `@actions/core` 3.0.1; the driver reaches `lib/command.js` by path, which ties it to that version layout.
+- **Delegation traps.** Worktree agents were created from the branch's remote state, not my local HEAD, so two reported the npm dependency missing even though I had committed it; commit dependencies before spawning, and push them. Agents must not share a file: one package dir plus one driver file per area kept merges trivial.
+- **GitHub traps.** After one PR merged, GitHub rebased the other open branches onto main: pushes failed with stale info, merges with 409 "Head branch was modified", and `expectedHeadSha` went stale. Re-read the PR head before merging. A `check_suite.completed` event for an old head says nothing about the new one. Force-push to a branch is denied by policy here; use a fresh branch and a new PR. `mergeable_state: blocked` is shown even when the merge then succeeds.
+- **Cost trap.** `get_job_logs` on a Go test job returns every PASS line; `tail_lines` of a few hundred still costs tens of thousands of tokens. The FAIL list is near the end only for small suites. Prefer logging failures only, or a `-run` filter.
+- **CI queue.** Runner capacity was the slow part; most "waiting" was queued jobs, not failures.
+
+Not covered, by design: `extract7z`/`extractXar` (need external binaries), `downloadTool` auth/headers (no Go API). Tar, zip and the manifest functions are being added in a separate PR.
+
 ## Running locally
 
 ```bash
