@@ -105,7 +105,16 @@ function snapshot(root) {
   return tree
 }
 
+// One node process runs every scenario: a scenario that sets PATH (the
+// "no xar in PATH" ones) must not leave it changed for the next ones.
+const originalEnv = { ...process.env }
+function restoreEnv() {
+  for (const k of Object.keys(process.env)) if (!(k in originalEnv)) delete process.env[k]
+  Object.assign(process.env, originalEnv)
+}
+
 async function run(sc) {
+  restoreEnv()
   for (const k of Object.keys(process.env)) {
     if (/^(RUNNER_|ACTIONS_|GITHUB_|INPUT_)/.test(k)) delete process.env[k]
   }
