@@ -38,6 +38,20 @@ https.request = (options, ...rest) => {
   }
   return httpsRequest(options, ...rest)
 }
+// @actions/http-client keeps the first agent it creates and hands it to every
+// later request. After the api.github.com request that agent is an https one,
+// and the follow-up requests (blob and redirect URLs on the test server, which
+// are plain http) would be refused with ERR_INVALID_PROTOCOL. With a proxy
+// variable set the client takes another branch, which hid this on a developer
+// machine. Real GitHub only answers with https URLs, so drop the https agent
+// from plain http requests.
+const httpRequest = http.request
+http.request = (options, ...rest) => {
+  if (options && typeof options === 'object' && options.agent && options.agent.protocol === 'https:') {
+    options = { ...options, agent: undefined }
+  }
+  return httpRequest(options, ...rest)
+}
 syncBuiltinESMExports()
 
 for (const sc of scenarios) {
