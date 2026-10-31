@@ -9,50 +9,35 @@ import (
 )
 
 func TestPlatformConstants(t *testing.T) {
-	assert.Equal(t, runtime.GOOS, Platform)
+	assert.Equal(t, nodePlatform(runtime.GOOS), Platform)
 	assert.Equal(t, runtime.GOOS == "windows", IsWindows)
 	assert.Equal(t, runtime.GOOS == "darwin", IsMacOS)
 	assert.Equal(t, runtime.GOOS == "linux", IsLinux)
 }
 
-func TestArchMapping(t *testing.T) {
-	tests := []struct {
-		goarch string
-		want   string
-	}{
-		{"amd64", "x64"},
-		{"386", "x32"},
-		{"arm64", "arm64"},
-		{"arm", "arm"},
-	}
-	for _, tc := range tests {
-		orig := runtime.GOARCH
-		_ = orig // just for documentation; we can't reassign runtime.GOARCH
-		// Test the jsArch function logic indirectly via the mapping
-		switch tc.goarch {
-		case "amd64":
-			assert.Equal(t, "x64", "x64", "amd64 should map to x64")
-		case "386":
-			assert.Equal(t, "x32", "x32", "386 should map to x32")
-		default:
-			assert.Equal(t, tc.goarch, tc.goarch, "passthrough arch")
-		}
-	}
+// the expected names are the values of Node.js os.platform()
+func TestNodePlatformNames(t *testing.T) {
+	assert.Equal(t, "win32", nodePlatform("windows"))
+	assert.Equal(t, "sunos", nodePlatform("solaris"))
+	assert.Equal(t, "linux", nodePlatform("linux"))
+	assert.Equal(t, "darwin", nodePlatform("darwin"))
 }
 
-func TestArchIsJSStyle(t *testing.T) {
-	// The Arch variable should follow JS naming conventions.
-	// On AMD64 hosts, it must be "x64", not "amd64".
-	if runtime.GOARCH == "amd64" {
-		assert.Equal(t, "x64", Arch)
+// the expected names are the values of Node.js os.arch()
+func TestNodeArchNames(t *testing.T) {
+	for goarch, want := range map[string]string{
+		"amd64": "x64", "386": "ia32", "arm64": "arm64", "arm": "arm",
+		"mipsle": "mipsel", "ppc64le": "ppc64", "riscv64": "riscv64", "s390x": "s390x",
+	} {
+		assert.Equal(t, want, nodeArch(goarch), goarch)
 	}
-	if runtime.GOARCH == "386" {
-		assert.Equal(t, "x32", Arch)
-	}
-	// Other arches pass through unchanged.
-	if runtime.GOARCH != "amd64" && runtime.GOARCH != "386" {
-		assert.Equal(t, runtime.GOARCH, Arch)
-	}
+	assert.Equal(t, nodeArch(runtime.GOARCH), Arch)
+}
+
+func TestRunCommandReportsMissingExecutableLikeTheReference(t *testing.T) {
+	_, err := runCommand("parity-no-such-executable")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "Unable to locate executable file: parity-no-such-executable.")
 }
 
 func TestGetDetailsStructure(t *testing.T) {

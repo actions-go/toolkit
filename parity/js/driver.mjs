@@ -44,6 +44,8 @@ const shims = {
 
 const RECORDED_HEADERS = ['authorization', 'accept', 'content-type', 'user-agent']
 
+// scenarios clear parts of the environment, inheritEnv copies from the original
+const originalEnv = { ...process.env }
 const scenarios = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
 const results = {}
 
@@ -117,7 +119,7 @@ async function exec(call) {
 async function run(sc) {
   // start from a clean environment so scenarios cannot leak into each other
   const inherited = {}
-  for (const k of sc.inheritEnv || []) inherited[k] = process.env[k]
+  for (const k of sc.inheritEnv || []) inherited[k] = originalEnv[k]
   for (const k of Object.keys(process.env)) {
     if (/^(INPUT_|STATE_|GITHUB_|RUNNER_|ACTIONS_)/.test(k) || k === 'PATH') {
       delete process.env[k]

@@ -1,0 +1,35 @@
+[
+  {"name": "group wraps the callback output", "calls": [{"fn": "group", "args": ["my group", {"$calls": [{"fn": "info", "args": ["inside"]}]}]}, {"fn": "info", "args": ["outside"]}]},
+  {"name": "group with empty callback", "calls": [{"fn": "group", "args": ["empty", {"$calls": []}]}]},
+  {"name": "group name is escaped like a message", "calls": [{"fn": "group", "args": ["a:b,c%d\ne", {"$calls": []}]}]},
+  {"name": "group runs commands issued by the callback", "calls": [{"fn": "group", "args": ["g", {"$calls": [{"fn": "warning", "args": ["w"]}, {"fn": "setOutput", "args": ["k", "v"]}, {"fn": "debug", "args": ["d"]}]}]}]},
+  {"name": "nested groups", "calls": [{"fn": "group", "args": ["outer", {"$calls": [{"fn": "group", "args": ["inner", {"$calls": [{"fn": "info", "args": ["deep"]}]}]}, {"fn": "info", "args": ["between"]}]}]}]},
+  {"name": "group ends when the callback throws", "calls": [{"fn": "group", "args": ["failing", {"$calls": [{"fn": "info", "args": ["before"]}], "throw": "boom"}]}, {"fn": "info", "args": ["after"]}]},
+  {"name": "group returns the callback result", "calls": [{"fn": "group", "args": ["g", {"$calls": [], "returns": 42}]}]},
+  {"name": "group twice", "calls": [{"fn": "group", "args": ["one", {"$calls": [{"fn": "info", "args": ["1"]}]}]}, {"fn": "group", "args": ["two", {"$calls": [{"fn": "info", "args": ["2"]}]}]}]},
+  {"name": "startGroup without endGroup", "calls": [{"fn": "startGroup", "args": ["open"]}, {"fn": "info", "args": ["x"]}]},
+  {"name": "endGroup without startGroup", "calls": [{"fn": "endGroup"}]},
+  {"name": "startGroup escapes the name", "calls": [{"fn": "startGroup", "args": ["a:b,c%d\r\ne"]}, {"fn": "endGroup"}]},
+
+  {"name": "stop and start commands", "calls": [{"fn": "stopCommands", "args": ["token123"]}, {"fn": "info", "args": ["::warning::not a command"]}, {"fn": "startCommands", "args": ["token123"]}, {"fn": "warning", "args": ["real"]}]},
+  {"name": "stopCommands escapes the token", "calls": [{"fn": "stopCommands", "args": ["a:b,c%d\ne"]}, {"fn": "startCommands", "args": ["a:b,c%d\ne"]}]},
+  {"name": "stopCommands with empty token", "calls": [{"fn": "stopCommands", "args": [""]}, {"fn": "startCommands", "args": [""]}]},
+
+  {"name": "toPlatformPath mixed separators", "calls": [{"fn": "toPlatformPath", "args": ["a/b\\c/d"]}]},
+  {"name": "toPlatformPath absolute posix path", "calls": [{"fn": "toPlatformPath", "args": ["/usr/local/bin"]}]},
+  {"name": "toPlatformPath windows drive path", "calls": [{"fn": "toPlatformPath", "args": ["C:\\Users\\x/y"]}]},
+  {"name": "toPlatformPath empty", "calls": [{"fn": "toPlatformPath", "args": [""]}]},
+  {"name": "toPlatformPath consecutive separators", "calls": [{"fn": "toPlatformPath", "args": ["a//b\\\\c"]}]},
+  {"name": "toPosixPath empty", "calls": [{"fn": "toPosixPath", "args": [""]}]},
+  {"name": "toPosixPath unc path", "calls": [{"fn": "toPosixPath", "args": ["\\\\server\\share\\f"]}]},
+  {"name": "toWin32Path empty", "calls": [{"fn": "toWin32Path", "args": [""]}]},
+  {"name": "toWin32Path unicode", "calls": [{"fn": "toWin32Path", "args": ["/dir/é/日本"]}]},
+
+  {"name": "platform platform", "calls": [{"fn": "platform.platform"}]},
+  {"name": "platform arch", "calls": [{"fn": "platform.arch"}]},
+  {"name": "platform isWindows", "calls": [{"fn": "platform.isWindows"}]},
+  {"name": "platform isMacOS", "calls": [{"fn": "platform.isMacOS"}]},
+  {"name": "platform isLinux", "calls": [{"fn": "platform.isLinux"}]},
+  {"name": "platform getDetails", "inheritEnv": ["PATH"], "calls": [{"fn": "platform.getDetails"}]},
+  {"name": "platform getDetails without PATH", "calls": [{"fn": "platform.getDetails"}]}
+]
