@@ -51,7 +51,11 @@ func applyDirectories(dirs []deferredDir) {
 func which(tool string) (string, error) {
 	path, err := exec.LookPath(tool)
 	if err != nil {
-		return "", fmt.Errorf("Unable to locate executable file: %s. Please verify either the file path exists or the file can be found within a directory specified by the PATH environment variable. Also check the file mode to verify the file is executable.", tool)
+		hint := "Also check the file mode to verify the file is executable."
+		if core.IsWindows {
+			hint = "Also verify the file has a valid extension for an executable file."
+		}
+		return "", fmt.Errorf("Unable to locate executable file: %s. Please verify either the file path exists or the file can be found within a directory specified by the PATH environment variable. %s", tool, hint)
 	}
 	if abs, err := filepath.Abs(path); err == nil {
 		path = abs
