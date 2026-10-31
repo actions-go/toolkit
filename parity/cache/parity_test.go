@@ -89,14 +89,18 @@ func newServer() *httptest.Server {
 		}
 		_, _ = w.Write(b)
 	})
-	mux.HandleFunc("/redirect", func(w http.ResponseWriter, r *http.Request) { http.Redirect(w, r, "/file", http.StatusFound) })
-	mux.HandleFunc("/redirect-permanent", func(w http.ResponseWriter, r *http.Request) {
-		http.Redirect(w, r, "/redirect", http.StatusMovedPermanently)
-	})
-	mux.HandleFunc("/redirect-307", func(w http.ResponseWriter, r *http.Request) {
-		http.Redirect(w, r, "/file", http.StatusTemporaryRedirect)
-	})
-	mux.HandleFunc("/redirect-to-404", func(w http.ResponseWriter, r *http.Request) { http.Redirect(w, r, "/404", http.StatusFound) })
+	// Location is absolute: the reference cannot follow a relative one
+	redirect := func(to string, status int) http.HandlerFunc {
+		return func(w http.ResponseWriter, r *http.Request) {
+			http.Redirect(w, r, "http://"+r.Host+to, status)
+		}
+	}
+	mux.HandleFunc("/redirect", redirect("/file", http.StatusFound))
+	mux.HandleFunc("/redirect-permanent", redirect("/redirect", http.StatusMovedPermanently))
+	mux.HandleFunc("/redirect-307", redirect("/file", http.StatusTemporaryRedirect))
+	mux.HandleFunc("/redirect-to-404", redirect("/404", http.StatusFound))
+	mux.HandleFunc("/redirect-relative", func(w http.ResponseWriter, r *http.Request) { http.Redirect(w, r, "/file", http.StatusFound) })
+	mux.HandleFunc("/redirect-loop", redirect("/redirect-loop", http.StatusFound))
 	for _, code := range []int{204, 206, 400, 401, 403, 404, 408, 429, 500, 503} {
 		code := code
 		mux.HandleFunc("/"+strconv.Itoa(code), func(w http.ResponseWriter, r *http.Request) {
