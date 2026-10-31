@@ -1,0 +1,9 @@
+[
+  {"scenario": "repo unknown", "reason": "context.repo throws in JS when neither GITHUB_REPOSITORY nor payload.repository is available. ActionContext.Repo is a struct field filled by ParseActionEnv, which has no error return, so Go yields empty owner and repo (public API)."},
+  {"scenario": "repo unknown with payload lacking a repository", "reason": "Same as 'repo unknown': the JS getter throws, the Go field is empty (public API)."},
+  {"scenario": "issue unknown repository", "reason": "context.issue throws in JS through context.repo; the Go ActionContext.Issue field is filled with empty owner and repo (public API)."},
+  {"scenario": "event file is invalid json", "reason": "new Context() throws a SyntaxError in JS. ParseActionEnv has no error return and keeps an empty payload (public API)."},
+  {"scenario": "event file is empty", "reason": "new Context() throws a SyntaxError in JS on an empty event file. ParseActionEnv has no error return and keeps an empty payload (public API)."},
+  {"scenario": "base url ignores GITHUB_SERVER_URL when GITHUB_API_URL is unset", "reason": "@actions/github falls back to https://api.github.com. The Go client keeps deriving the enterprise API URL (<server>/api/v3/) from GITHUB_SERVER_URL when GITHUB_API_URL is unset, which existing users of the Go client may rely on. Runners always set GITHUB_API_URL, where both agree."},
+  {"scenario": "request without a token", "reason": "getOctokit throws 'Parameter token or opts.auth is required' without a token. NewClient returns no error and sends unauthenticated requests when GITHUB_TOKEN and the github-token / token inputs are all empty (public API)."}
+]

@@ -8,9 +8,11 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"regexp"
 	"strings"
+	"unicode"
 
 	"github.com/actions-go/toolkit/core"
 	"github.com/google/go-github/v42/github"
@@ -29,16 +31,38 @@ func token() string {
 	return ""
 }
 
-var orchestrationIDUnsafe = regexp.MustCompile(`[^a-zA-Z0-9_.-]`)
+// isJSSpace reports whether r is trimmed by JavaScript's String.prototype.trim.
+// It differs from unicode.IsSpace on U+0085 (not trimmed) and U+FEFF (trimmed).
+func isJSSpace(r rune) bool {
+	return (unicode.IsSpace(r) && r != 0x85) || r == 0xFEFF
+}
+
+// sanitizeOrchestrationID replaces every character outside [a-zA-Z0-9_.-] by
+// an underscore. Like JavaScript, it counts UTF-16 code units, so a character
+// outside the basic multilingual plane becomes two underscores.
+func sanitizeOrchestrationID(id string) string {
+	var b strings.Builder
+	for _, r := range id {
+		switch {
+		case r >= 'a' && r <= 'z', r >= 'A' && r <= 'Z', r >= '0' && r <= '9', r == '_', r == '.', r == '-':
+			b.WriteRune(r)
+		case r >= 0x10000:
+			b.WriteString("__")
+		default:
+			b.WriteByte('_')
+		}
+	}
+	return b.String()
+}
 
 // UserAgentWithOrchestrationID appends the actions_orchestration_id tag built from
 // ACTIONS_ORCHESTRATION_ID to baseUserAgent. The tag is not added twice.
 func UserAgentWithOrchestrationID(baseUserAgent string) string {
-	id := strings.TrimSpace(os.Getenv("ACTIONS_ORCHESTRATION_ID"))
+	id := strings.TrimFunc(os.Getenv("ACTIONS_ORCHESTRATION_ID"), isJSSpace)
 	if id == "" {
 		return baseUserAgent
 	}
-	tag := "actions_orchestration_id/" + orchestrationIDUnsafe.ReplaceAllString(id, "_")
+	tag := "actions_orchestration_id/" + sanitizeOrchestrationID(id)
 	if strings.Contains(baseUserAgent, tag) {
 		return baseUserAgent
 	}
@@ -58,17 +82,27 @@ func newClient() *github.Client {
 	token := token()
 	httpClient := http.DefaultClient
 	if token != "" {
-		ts := oauth2.StaticTokenSource(
-			&oauth2.Token{AccessToken: token},
-		)
+		// like @actions/github, authenticate with `Authorization: token <token>`
+		ts := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: token, TokenType: "token"})
 		httpClient = oauth2.NewClient(context.Background(), ts)
 	}
-	if server, ok := os.LookupEnv("GITHUB_SERVER_URL"); !ok || server == "https://github.com" {
-		return github.NewClient(httpClient)
+	client := github.NewClient(httpClient)
+	if server, ok := os.LookupEnv("GITHUB_SERVER_URL"); ok && server != "https://github.com" {
+		var err error
+		client, err = github.NewEnterpriseClient(server, server, httpClient)
+		if err != nil {
+			core.Errorf("failed to initialise GitHub client: %v", err)
+			return github.NewClient(httpClient)
+		}
 	}
-	client, err := github.NewEnterpriseClient(os.Getenv("GITHUB_SERVER_URL"), os.Getenv("GITHUB_SERVER_URL"), httpClient)
-	if err != nil {
-		core.Errorf("failed to initialise GitHub client: %v", err)
+	// like @actions/github, GITHUB_API_URL is the API base URL
+	if api := os.Getenv("GITHUB_API_URL"); api != "" {
+		u, err := url.Parse(strings.TrimSuffix(api, "/") + "/")
+		if err != nil {
+			core.Errorf("failed to parse GITHUB_API_URL: %v", err)
+		} else {
+			client.BaseURL = u
+		}
 	}
 	return client
 }

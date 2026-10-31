@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -105,7 +106,7 @@ type ActionContext struct {
 }
 
 func noGitHubEvent(path string) {
-	fmt.Println(fmt.Sprintf("GITHUB_EVENT_PATH %s does not exist", path))
+	fmt.Printf("GITHUB_EVENT_PATH %s does not exist\n", path)
 }
 
 func getIndex(a []string, i int) string {
@@ -115,8 +116,14 @@ func getIndex(a []string, i int) string {
 	return ""
 }
 
+var leadingInteger = regexp.MustCompile(`^[ \t\n\v\f\r\x{a0}\x{1680}\x{2000}-\x{200a}\x{2028}\x{2029}\x{202f}\x{205f}\x{3000}\x{feff}]*[+-]?[0-9]+`)
+
+// parseInt64Env reads the variable like JavaScript's parseInt(value, 10): the
+// leading integer is used and anything after it is ignored. It returns 0 when
+// there is none, where JavaScript gives NaN.
 func parseInt64Env(name string) int64 {
-	v, err := strconv.ParseInt(os.Getenv(name), 10, 64)
+	digits := leadingInteger.FindString(os.Getenv(name))
+	v, err := strconv.ParseInt(strings.TrimLeftFunc(digits, isJSSpace), 10, 64)
 	if err != nil {
 		return 0
 	}
@@ -124,7 +131,7 @@ func parseInt64Env(name string) int64 {
 }
 
 func getenvOrDefault(name, defaultVal string) string {
-	if v := os.Getenv(name); v != "" {
+	if v, ok := os.LookupEnv(name); ok {
 		return v
 	}
 	return defaultVal
@@ -132,11 +139,7 @@ func getenvOrDefault(name, defaultVal string) string {
 
 // ParseActionEnv parses the environment and extracts the ActionContext on demand. For example in tests
 func ParseActionEnv() ActionContext {
-	r := strings.SplitN(os.Getenv("GITHUB_REPOSITORY"), "/", 2)
-	repo := ActionRepo{
-		Owner: getIndex(r, 0),
-		Repo:  getIndex(r, 1),
-	}
+	repo := repoFromEnv()
 	ctx := ActionContext{
 		EventName:         os.Getenv("GITHUB_EVENT_NAME"),
 		SHA:               os.Getenv("GITHUB_SHA"),
@@ -157,32 +160,45 @@ func ParseActionEnv() ActionContext {
 		StateFilePath:     os.Getenv(core.GitHubStateFilePathEnvName),
 		ExportEnvFilePath: os.Getenv(core.GitHubExportEnvFilePathEnvName),
 		Repo:              repo,
-		Issue: ActionIssue{
-			Owner: repo.Owner,
-			Repo:  repo.Repo,
-		},
 	}
-	eventPath := os.Getenv("GITHUB_EVENT_PATH")
-	if _, err := os.Stat(eventPath); err == nil && eventPath != "" {
-		fd, err := os.Open(eventPath)
-		if err != nil {
+	// like @actions/github, nothing is said when GITHUB_EVENT_PATH is unset or empty
+	if eventPath := os.Getenv("GITHUB_EVENT_PATH"); eventPath != "" {
+		if fd, err := os.Open(eventPath); err != nil {
 			noGitHubEvent(eventPath)
 		} else {
+			defer fd.Close()
 			json.NewDecoder(fd).Decode(&ctx.Payload)
 		}
-	} else {
-		noGitHubEvent(eventPath)
 	}
-	if ctx.Payload.Issue != nil && ctx.Payload.Issue.Number != nil {
-		ctx.Issue.Number = *ctx.Payload.Issue.Number
-	} else if ctx.Payload.PullRequest != nil && ctx.Payload.PullRequest.Number != nil {
-		ctx.Issue.Number = *ctx.Payload.PullRequest.Number
-	} else if ctx.Payload.Number != nil {
-		ctx.Issue.Number = *ctx.Payload.Issue.Number
+	// GITHUB_REPOSITORY takes precedence over the repository of the payload
+	if repo == (ActionRepo{}) && ctx.Payload.Repository != nil {
+		ctx.Repo.Owner, ctx.Repo.Repo = ctx.Payload.Repository.GetOwner().GetLogin(), ctx.Payload.Repository.GetName()
 	}
-	if ctx.Payload.Repository != nil {
-		ctx.Issue.Owner, ctx.Issue.Repo = ctx.Payload.Repository.GetOwner().GetLogin(), ctx.Payload.Repository.GetName()
-		ctx.Repo.Owner, ctx.Repo.Repo = ctx.Issue.Owner, ctx.Issue.Repo
-	}
+	ctx.Issue = ActionIssue{Owner: ctx.Repo.Owner, Repo: ctx.Repo.Repo, Number: issueNumber(ctx.Payload)}
 	return ctx
+}
+
+// repoFromEnv splits GITHUB_REPOSITORY into owner and repository. Segments
+// after the second are dropped.
+func repoFromEnv() ActionRepo {
+	r := strings.Split(os.Getenv("GITHUB_REPOSITORY"), "/")
+	return ActionRepo{Owner: getIndex(r, 0), Repo: getIndex(r, 1)}
+}
+
+// issueNumber is the number of the first of the issue, the pull request or the
+// payload itself that is present, even when that one has no number.
+func issueNumber(p WebhookPayload) int {
+	var n *int
+	switch {
+	case p.Issue != nil:
+		n = p.Issue.Number
+	case p.PullRequest != nil:
+		n = p.PullRequest.Number
+	default:
+		n = p.Number
+	}
+	if n == nil {
+		return 0
+	}
+	return *n
 }
