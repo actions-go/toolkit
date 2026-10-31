@@ -144,7 +144,11 @@ var runCommand = func(name string, args ...string) (string, error) {
 	out, err := exec.Command(name, args...).Output()
 	if errors.Is(err, exec.ErrNotFound) {
 		// same text as @actions/io, which @actions/core uses to run the command
-		return "", fmt.Errorf("Unable to locate executable file: %s. Please verify either the file path exists or the file can be found within a directory specified by the PATH environment variable. Also check the file mode to verify the file is executable.", name) //nolint:staticcheck
+		hint := "Also check the file mode to verify the file is executable."
+		if IsWindows {
+			hint = "Also verify the file has a valid extension for an executable file."
+		}
+		return "", fmt.Errorf("Unable to locate executable file: %s. Please verify either the file path exists or the file can be found within a directory specified by the PATH environment variable. %s", name, hint) //nolint:staticcheck
 	}
 	if err != nil {
 		return "", err

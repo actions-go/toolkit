@@ -16,7 +16,9 @@ import (
 const maxCopyDepth = 255
 
 func noRel(path string) string {
-	p := strings.Split(path, string(filepath.Separator))
+	// both separators count on Windows, where a target "../x" must not escape
+	// the tool folder (ToSlash changes nothing elsewhere)
+	p := strings.Split(filepath.ToSlash(path), "/")
 	// In case the source is provided
 	for len(p) > 0 && (p[0] == ".." || p[0] == ".") {
 		p = p[1:]
