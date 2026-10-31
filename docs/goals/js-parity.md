@@ -65,7 +65,22 @@ Results: `core` 291 scenarios, `github` 70, `cache` 217. Each comparison found r
 - **Cost trap.** `get_job_logs` on a Go test job returns every PASS line; `tail_lines` of a few hundred still costs tens of thousands of tokens. The FAIL list is near the end only for small suites. Prefer logging failures only, or a `-run` filter.
 - **CI queue.** Runner capacity was the slow part; most "waiting" was queued jobs, not failures.
 
-Not covered, by design: `extract7z`/`extractXar` (need external binaries), `downloadTool` auth/headers (no Go API). Tar, zip and the manifest functions are being added in a separate PR.
+## State at the end (all merged to main)
+
+| Area | Reference | Scenarios | Known divergences | Runs on |
+|---|---|---|---|---|
+| `core` | @actions/core 3.0.1 | 291 | 9 | Linux, macOS, Windows |
+| `github` | @actions/github 9.1.1 | 70 | 7 | Linux, macOS, Windows |
+| `cache` | @actions/tool-cache 4.0.0 | 344 | 16 | Linux, macOS (not Windows) |
+
+Narrowed on purpose after the first macOS and Windows runs:
+- The whole `cache` suite is skipped on Windows: it compares POSIX file system behaviour (modes, symlink targets, `/` paths in error text).
+- tar and zip extraction scenarios (`requires: ["posix"]`) run on Linux only. The Go extractors reproduce GNU tar and Info-ZIP unzip; macOS ships bsdtar and another unzip build (other listings, differently normalised Unicode names). macOS still runs the manifest, version and cache scenarios.
+- `platform getDetails without PATH` is skipped on Windows (cause not analysed).
+
+Not covered, by design: `extract7z`/`extractXar` (need external binaries), xz/zstd tar archives (no standard library decoder; Go returns an explicit "unsupported" error), `downloadTool` auth/headers (no Go API), and the Go-only helpers (`DownloadSelectedRepositoryFiles`, `MatchesOneOf`, `core/artifacts.go`).
+
+Tar, zip and manifest hang trap: a reference call that never finishes (a tar waiting on stdin under bsdtar) hung the macOS job for the full 10 minute `go test` timeout with no scenario named. The cache driver now fails any reference call after 60 seconds, naming the scenario.
 
 ## Running locally
 
