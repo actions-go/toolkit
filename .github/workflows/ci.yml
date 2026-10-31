@@ -67,14 +67,23 @@ jobs:
   build:
     strategy:
       matrix:
+        # all OSes on the latest Go (platform-specific code lives in core/ and cache/),
+        # older Go versions on linux only (the language behaves the same everywhere)
         os: [ubuntu-latest, macos-latest, windows-latest]
-        # latest 4 go versions
-        go-version: ["1.23", "1.24", "1.25", "1.26"]
+        go-version: ["1.26"]
         include:
+        - os: ubuntu-latest
+          go-version: "1.23"
+        - os: ubuntu-latest
+          go-version: "1.24"
+        - os: ubuntu-latest
+          go-version: "1.25"
         - coverageArgs: "-coverprofile=coverage.txt -covermode=atomic"
           os: ubuntu-latest
+          go-version: "1.26"
         - coverageArgs: "-coverprofile=coverage.txt -covermode=atomic"
           os: macos-latest
+          go-version: "1.26"
     name: Build
     runs-on: ${{ matrix.os }}
     steps:
