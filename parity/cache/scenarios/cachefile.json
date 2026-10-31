@@ -11,9 +11,9 @@
    "calls": [{"fn": "cacheFile", "args": ["{{src}}/a.txt", "t.txt", "tool", "1.2", "x64"]}]},
   {"name": "cacheFile prerelease version", "src": [{"path": "a.txt", "content": "x"}],
    "calls": [{"fn": "cacheFile", "args": ["{{src}}/a.txt", "t.txt", "tool", "1.2.3-beta.1+build5", "x64"]}]},
-  {"name": "cacheFile executable mode preserved", "src": [{"path": "bin", "content": "#!/bin/sh\n", "mode": "0755"}],
+  {"name": "cacheFile executable mode preserved", "requires": ["unix"],"src": [{"path": "bin", "content": "#!/bin/sh\n", "mode": "0755"}],
    "calls": [{"fn": "cacheFile", "args": ["{{src}}/bin", "tool", "tool", "1.0.0", "x64"]}]},
-  {"name": "cacheFile restrictive mode preserved", "src": [{"path": "secret", "content": "s", "mode": "0600"}],
+  {"name": "cacheFile restrictive mode preserved", "requires": ["unix"],"src": [{"path": "secret", "content": "s", "mode": "0600"}],
    "calls": [{"fn": "cacheFile", "args": ["{{src}}/secret", "secret", "tool", "1.0.0", "x64"]}]},
   {"name": "cacheFile binary content", "src": [{"path": "b.bin", "content": "\u0000\u0001\u007f"}],
    "calls": [{"fn": "cacheFile", "args": ["{{src}}/b.bin", "b.bin", "tool", "1.0.0", "x64"]}]},
@@ -45,6 +45,6 @@
    "calls": [{"fn": "cacheFile", "args": ["{{src}}/a.txt", "../escaped.txt", "tool", "1.0.0", "x64"]}]},
   {"name": "cacheFile empty target", "src": [{"path": "a.txt", "content": "a"}],
    "calls": [{"fn": "cacheFile", "args": ["{{src}}/a.txt", "", "tool", "1.0.0", "x64"]}]},
-  {"name": "cacheFile symlinked source", "src": [{"path": "real.txt", "content": "real"}, {"path": "link.txt", "symlink": "real.txt"}],
+  {"name": "cacheFile symlinked source", "requires": ["unix"],"src": [{"path": "real.txt", "content": "real"}, {"path": "link.txt", "symlink": "real.txt"}],
    "calls": [{"fn": "cacheFile", "args": ["{{src}}/link.txt", "link.txt", "tool", "1.0.0", "x64"]}]}
 ]

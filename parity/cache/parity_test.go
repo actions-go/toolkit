@@ -52,7 +52,8 @@ type call struct {
 
 type scenario struct {
 	Name string `json:"name"`
-	// Requires lists what the scenario needs: "posix" (not run on Windows) and
+	// Requires lists what the scenario needs: "unix" (not run on Windows: Unix
+	// modes, symbolic links), "posix" (Linux only: the system tar and unzip) and
 	// the names of binaries the reference shells out to (tar, unzip, bzip2).
 	Requires []string          `json:"requires,omitempty"`
 	Env      map[string]string `json:"env"`
@@ -476,7 +477,16 @@ func (r result) normalise(server string) result {
 		r.Root, "<ROOT>",
 		server, "<SERVER>",
 	).Replace
-	norm := func(s string) string { return uuidName.ReplaceAllString(n(s), "<UUID>") }
+	norm := func(s string) string {
+		s = uuidName.ReplaceAllString(n(s), "<UUID>")
+		if runtime.GOOS == "windows" {
+			// node reports "<SRC>\a.txt" where a path was joined with "/" and Go
+			// the path as given: the separator is the operating system's, not
+			// behaviour of the package
+			s = strings.ReplaceAll(s, `\`, "/")
+		}
+		return s
+	}
 
 	r.Stdout = norm(r.Stdout)
 	r.Root = ""
@@ -622,6 +632,17 @@ func TestHarnessMatchesHandWorkedAnswer(t *testing.T) {
 // PARITY_REQUIRED (the CI runners that have it).
 func unmet(sc scenario) (reason string, fatal bool) {
 	for _, r := range sc.Requires {
+		if r == "unix" {
+			// Windows has no Unix permission bits (the snapshots leave modes out),
+			// and creating a symbolic link needs a privilege the runners may not
+			// grant; where it works, io.cp recreates it as a junction with an
+			// absolute target, so Go (which copies the link as is) and node cannot
+			// agree on what a link means there.
+			if runtime.GOOS == "windows" {
+				return "the scenario compares Unix modes or symbolic links, which Windows does not have in the same sense: not compared on windows", false
+			}
+			continue
+		}
 		if r == "posix" {
 			// The reference shells out to the system tar and unzip. The Go
 			// extractors reproduce GNU tar and Info-ZIP unzip as shipped on
@@ -649,14 +670,6 @@ func unmet(sc scenario) (reason string, fatal bool) {
 }
 
 func TestParityWithReferenceToolCache(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		// The scenarios compare POSIX file system behaviour: permission bits,
-		// symlink targets and error text with "/" separated paths. The first
-		// Windows run showed differences in all three that come from the
-		// operating system (backslash paths, absolute symlink targets, no mode
-		// bits), not from the port. Linux and macOS cover the suite.
-		t.Skip("the cache suite compares POSIX file system semantics")
-	}
 	all := loadScenarios(t)
 	var scenarios []scenario
 	skipped := map[string]string{}
