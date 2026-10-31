@@ -36,7 +36,7 @@ func TestIssueCommand(t *testing.T) {
 	}, "some\r\n%message")
 	assert.Contains(t, b.String(), "some=a%0A%0Dvalue%2C%3A%25")
 	assert.Contains(t, b.String(), "other=value")
-	assert.Regexp(t, regexp.MustCompile("::some%0D%0A%25message\n$"), b.String())
+	assert.Regexp(t, regexp.MustCompile("::some%0D%0A%25message"+regexp.QuoteMeta(EOF)+"$"), b.String())
 	assert.Regexp(t, regexp.MustCompile("^::hello "), b.String())
 	assert.Len(t, strings.Split(b.String(), ","), 2)
 
