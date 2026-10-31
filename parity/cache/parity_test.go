@@ -53,7 +53,8 @@ type call struct {
 type scenario struct {
 	Name string `json:"name"`
 	// Requires lists what the scenario needs: "unix" (not run on Windows: Unix
-	// modes, symbolic links), "posix" (Linux only: the system tar and unzip) and
+	// modes, symbolic links), "osversion" (not run where the OS version is
+	// empty), "posix" (Linux only: the system tar and unzip) and
 	// the names of binaries the reference shells out to (tar, unzip, bzip2).
 	Requires []string          `json:"requires,omitempty"`
 	Env      map[string]string `json:"env"`
@@ -630,6 +631,15 @@ func unmet(sc scenario) (reason string, fatal bool) {
 			// agree on what a link means there.
 			if runtime.GOOS == "windows" {
 				return "the scenario compares Unix modes or symbolic links, which Windows does not have in the same sense: not compared on windows", false
+			}
+			continue
+		}
+		if r == "osversion" {
+			// the reference knows no OS version on Windows (it answers ""), so a
+			// platform_version taken from the machine would be an empty string,
+			// which Go leaves out when it echoes the manifest
+			if cache.OSVersion() == "" {
+				return "the reference reports no OS version on " + runtime.GOOS + ": not compared", false
 			}
 			continue
 		}
