@@ -44,7 +44,7 @@ func destination(options *DownloadToolOptions) string {
 	if options != nil && options.Destination != "" {
 		return options.Destination
 	}
-	return filepath.Join(tempDirectory, uuid.New().String())
+	return filepath.Join(tempDir(), uuid.New().String())
 }
 
 func ensureDestDir(dest string) error {
@@ -124,7 +124,7 @@ func jsPlatform() string {
 }
 
 func toolPath(options CacheOptions) string {
-	return filepath.Join(cacheRoot, options.Tool, options.Version, options.Arch)
+	return filepath.Join(cacheDirectory(), options.Tool, options.Version, options.Arch)
 }
 
 func cleanSemver(version string) string {
@@ -256,11 +256,11 @@ func ListAllCachedVersions(options CacheOptions) []string {
 	}
 	versions := []string{}
 	for _, match := range matched {
-		p, err := filepath.Rel(filepath.Join(cacheRoot, options.Tool), match)
+		p, err := filepath.Rel(filepath.Join(cacheDirectory(), options.Tool), match)
 		if err == nil {
 			versions = append(versions, strings.SplitN(p, string(filepath.Separator), 2)[0])
 		} else {
-			core.Warningf("error getting version, unable to get relative path from %s to %s: %v", match, filepath.Join(cacheRoot, options.Tool), err)
+			core.Warningf("error getting version, unable to get relative path from %s to %s: %v", match, filepath.Join(cacheDirectory(), options.Tool), err)
 		}
 	}
 	return versions
