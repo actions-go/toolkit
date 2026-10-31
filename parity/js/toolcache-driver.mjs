@@ -52,7 +52,8 @@ function snapshot(root) {
       const p = path.join(dir, name)
       const rel = path.relative(root, p).split(path.sep).join('/')
       const st = fs.lstatSync(p)
-      const mode = '0' + (st.mode & 0o777).toString(8)
+      // Windows has no Unix permission bits: modes are not compared there
+      const mode = process.platform === 'win32' ? undefined : '0' + (st.mode & 0o777).toString(8)
       if (st.isSymbolicLink()) {
         tree[rel] = { kind: 'symlink', target: fs.readlinkSync(p) }
       } else if (st.isDirectory()) {
