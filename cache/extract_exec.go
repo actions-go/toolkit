@@ -28,7 +28,9 @@ func runTool(tool string, args []string, dir string, silent bool) error {
 	if silent {
 		cmd.Stdout, cmd.Stderr = io.Discard, io.Discard
 	} else {
-		cmd.Stdout, cmd.Stderr = os.Stdout, os.Stderr
+		// @actions/exec writes the tool's stderr into the same log stream as
+		// its stdout, so a failing tool's message appears in the step log
+		cmd.Stdout, cmd.Stderr = os.Stdout, os.Stdout
 	}
 	err := cmd.Run()
 	var exit *exec.ExitError
