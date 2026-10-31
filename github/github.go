@@ -15,7 +15,7 @@ import (
 	"unicode"
 
 	"github.com/actions-go/toolkit/core"
-	"github.com/google/go-github/v42/github"
+	"github.com/google/go-github/v74/github"
 	"golang.org/x/oauth2"
 )
 

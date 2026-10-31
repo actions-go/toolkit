@@ -7,10 +7,12 @@ import (
 	"os"
 	"strings"
 	"sync"
+
+	"github.com/google/uuid"
 )
 
 const (
-	delimiter = "_GitHubActionsGoFileCommandDelimeter_"
+	delimiterPrefix = "ghadelimiter_"
 
 	// StatusFailed is returned by Status() in case this action has been marked as failed
 	StatusFailed = 1
@@ -112,7 +114,12 @@ func annotationToProperties(p AnnotationProperties) map[string]string {
 	return props
 }
 
+// formatOutput renders name and value as a multi-line file command entry. The
+// delimiter is random for every entry, like @actions/core: a fixed one could be
+// guessed by whoever controls the value, who could then end the entry early and
+// forge further outputs or environment variables.
 func formatOutput(name, value string) string {
+	delimiter := delimiterPrefix + uuid.NewString()
 	return strings.Join(
 		[]string{
 			fmt.Sprintf("%s<<%s", name, delimiter),
@@ -141,7 +148,13 @@ func AddPath(path string) {
 	if err := issueFileCommand(GitHubPathFilePathEnvName, path); err != nil {
 		Issue("add-path", path)
 	}
-	os.Setenv("PATH", path+string(os.PathListSeparator)+os.Getenv("PATH"))
+	if current := os.Getenv("PATH"); current != "" {
+		os.Setenv("PATH", path+string(os.PathListSeparator)+current)
+	} else {
+		// no trailing separator: an empty PATH entry means the current directory.
+		// (@actions/core appends the literal text "undefined" here.)
+		os.Setenv("PATH", path)
+	}
 }
 
 // GetBoolInput gets the value of an input and returns whether it is a truthy value per
@@ -173,12 +186,25 @@ func GetMultilineInput(name string) []string {
 	lines := strings.Split(val, "\n")
 	result := make([]string, 0, len(lines))
 	for _, line := range lines {
-		trimmed := strings.TrimSpace(line)
-		if trimmed != "" {
-			result = append(result, trimmed)
+		// like @actions/core, empty lines are dropped before the lines are trimmed:
+		// a line of blanks is kept as an empty value
+		if line != "" {
+			result = append(result, trimJS(line))
 		}
 	}
 	return result
+}
+
+// trimJS trims the characters JavaScript's String.prototype.trim removes, which
+// are not exactly those of strings.TrimSpace (U+FEFF is trimmed, U+0085 is not).
+func trimJS(s string) string {
+	return strings.TrimFunc(s, func(r rune) bool {
+		switch r {
+		case '\t', '\n', '\v', '\f', '\r', ' ', 0xA0, 0x1680, 0x2028, 0x2029, 0x202F, 0x205F, 0x3000, 0xFEFF:
+			return true
+		}
+		return r >= 0x2000 && r <= 0x200A
+	})
 }
 
 // GetInput gets the value of an input.  The value is also trimmed.
@@ -187,11 +213,11 @@ func GetInput(name string) (string, bool) {
 	if !ok {
 		val, ok := jsonInputs[name]
 		if ok {
-			return strings.TrimSpace(val), true
+			return trimJS(val), true
 		}
 		return "", false
 	}
-	return strings.TrimSpace(val), true
+	return trimJS(val), true
 }
 
 // GetInputOrDefault gets the value of an input. If value is not found, a default value is used

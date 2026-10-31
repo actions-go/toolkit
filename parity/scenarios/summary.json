@@ -1,0 +1,97 @@
+[
+  {"name": "summary addRaw", "calls": [{"fn": "summary.addRaw", "args": ["hello"]}, {"fn": "summary.stringify"}, {"fn": "summary.write"}]},
+  {"name": "summary addRaw with EOL", "calls": [{"fn": "summary.addRaw", "args": ["hello", true]}, {"fn": "summary.stringify"}]},
+  {"name": "summary addRaw without EOL flag false", "calls": [{"fn": "summary.addRaw", "args": ["hello", false]}, {"fn": "summary.stringify"}]},
+  {"name": "summary addRaw number", "calls": [{"fn": "summary.addRaw", "args": [42]}, {"fn": "summary.stringify"}]},
+  {"name": "summary addRaw unicode and html", "calls": [{"fn": "summary.addRaw", "args": ["<b>é 日本 😀 & \"q\"</b>", true]}, {"fn": "summary.write"}]},
+  {"name": "summary addEOL", "calls": [{"fn": "summary.addRaw", "args": ["a"]}, {"fn": "summary.addEOL"}, {"fn": "summary.addRaw", "args": ["b"]}, {"fn": "summary.stringify"}]},
+
+  {"name": "summary addCodeBlock", "calls": [{"fn": "summary.addCodeBlock", "args": ["echo hi"]}, {"fn": "summary.stringify"}]},
+  {"name": "summary addCodeBlock with lang", "calls": [{"fn": "summary.addCodeBlock", "args": ["echo hi", "bash"]}, {"fn": "summary.stringify"}]},
+  {"name": "summary addCodeBlock empty code", "calls": [{"fn": "summary.addCodeBlock", "args": [""]}, {"fn": "summary.stringify"}]},
+  {"name": "summary addCodeBlock empty lang", "calls": [{"fn": "summary.addCodeBlock", "args": ["x", ""]}, {"fn": "summary.stringify"}]},
+  {"name": "summary addCodeBlock multiline", "calls": [{"fn": "summary.addCodeBlock", "args": ["a\n  b\n", "go"]}, {"fn": "summary.stringify"}]},
+
+  {"name": "summary addList unordered", "calls": [{"fn": "summary.addList", "args": [["a", "b", "c"]]}, {"fn": "summary.stringify"}]},
+  {"name": "summary addList ordered", "calls": [{"fn": "summary.addList", "args": [["a", "b"], true]}, {"fn": "summary.stringify"}]},
+  {"name": "summary addList ordered false", "calls": [{"fn": "summary.addList", "args": [["a"], false]}, {"fn": "summary.stringify"}]},
+  {"name": "summary addList empty", "calls": [{"fn": "summary.addList", "args": [[]]}, {"fn": "summary.stringify"}]},
+  {"name": "summary addList with empty item", "calls": [{"fn": "summary.addList", "args": [["a", "", "c"]]}, {"fn": "summary.stringify"}]},
+
+  {"name": "summary addTable strings", "calls": [{"fn": "summary.addTable", "args": [[["a", "b"], ["c", "d"]]]}, {"fn": "summary.stringify"}]},
+  {"name": "summary addTable header and data cells", "calls": [{"fn": "summary.addTable", "args": [[[{"data": "H1", "header": true}, {"data": "H2", "header": true}], [{"data": "x"}, "y"]]]}, {"fn": "summary.stringify"}]},
+  {"name": "summary addTable colspan and rowspan", "calls": [{"fn": "summary.addTable", "args": [[[{"data": "wide", "colspan": "2"}, {"data": "tall", "rowspan": "3"}], [{"data": "both", "colspan": "2", "rowspan": "2"}]]]}, {"fn": "summary.stringify"}]},
+  {"name": "summary addTable numeric spans", "calls": [{"fn": "summary.addTable", "args": [[[{"data": "n", "colspan": 2, "rowspan": 0}]]]}, {"fn": "summary.stringify"}]},
+  {"name": "summary addTable empty cell", "calls": [{"fn": "summary.addTable", "args": [[[{"data": ""}, ""]]]}, {"fn": "summary.stringify"}]},
+  {"name": "summary addTable empty", "calls": [{"fn": "summary.addTable", "args": [[]]}, {"fn": "summary.stringify"}]},
+  {"name": "summary addTable empty row", "calls": [{"fn": "summary.addTable", "args": [[[]]]}, {"fn": "summary.stringify"}]},
+
+  {"name": "summary addDetails", "calls": [{"fn": "summary.addDetails", "args": ["Label", "Content"]}, {"fn": "summary.stringify"}]},
+  {"name": "summary addDetails empty content", "calls": [{"fn": "summary.addDetails", "args": ["Label", ""]}, {"fn": "summary.stringify"}]},
+  {"name": "summary addDetails empty label", "calls": [{"fn": "summary.addDetails", "args": ["", "Content"]}, {"fn": "summary.stringify"}]},
+
+  {"name": "summary addImage", "calls": [{"fn": "summary.addImage", "args": ["https://x/y.png", "an image"]}, {"fn": "summary.stringify"}]},
+  {"name": "summary addImage with width and height", "calls": [{"fn": "summary.addImage", "args": ["y.png", "alt", {"width": "10", "height": "20"}]}, {"fn": "summary.stringify"}]},
+  {"name": "summary addImage with width only", "calls": [{"fn": "summary.addImage", "args": ["y.png", "alt", {"width": "10"}]}, {"fn": "summary.stringify"}]},
+  {"name": "summary addImage with height only", "calls": [{"fn": "summary.addImage", "args": ["y.png", "alt", {"height": "20"}]}, {"fn": "summary.stringify"}]},
+  {"name": "summary addImage with empty options", "calls": [{"fn": "summary.addImage", "args": ["y.png", "alt", {}]}, {"fn": "summary.stringify"}]},
+  {"name": "summary addImage with empty width", "calls": [{"fn": "summary.addImage", "args": ["y.png", "alt", {"width": "", "height": "5"}]}, {"fn": "summary.stringify"}]},
+  {"name": "summary addImage empty alt", "calls": [{"fn": "summary.addImage", "args": ["y.png", ""]}, {"fn": "summary.stringify"}]},
+
+  {"name": "summary addHeading default level", "calls": [{"fn": "summary.addHeading", "args": ["Title"]}, {"fn": "summary.stringify"}]},
+  {"name": "summary addHeading level 1", "calls": [{"fn": "summary.addHeading", "args": ["T", 1]}, {"fn": "summary.stringify"}]},
+  {"name": "summary addHeading level 3", "calls": [{"fn": "summary.addHeading", "args": ["T", 3]}, {"fn": "summary.stringify"}]},
+  {"name": "summary addHeading level 6", "calls": [{"fn": "summary.addHeading", "args": ["T", 6]}, {"fn": "summary.stringify"}]},
+  {"name": "summary addHeading level as string", "calls": [{"fn": "summary.addHeading", "args": ["T", "4"]}, {"fn": "summary.stringify"}]},
+  {"name": "summary addHeading level 0", "calls": [{"fn": "summary.addHeading", "args": ["T", 0]}, {"fn": "summary.stringify"}]},
+  {"name": "summary addHeading level 7", "calls": [{"fn": "summary.addHeading", "args": ["T", 7]}, {"fn": "summary.stringify"}]},
+  {"name": "summary addHeading negative level", "calls": [{"fn": "summary.addHeading", "args": ["T", -2]}, {"fn": "summary.stringify"}]},
+  {"name": "summary addHeading fractional level", "calls": [{"fn": "summary.addHeading", "args": ["T", 2.5]}, {"fn": "summary.stringify"}]},
+  {"name": "summary addHeading non numeric level", "calls": [{"fn": "summary.addHeading", "args": ["T", "big"]}, {"fn": "summary.stringify"}]},
+  {"name": "summary addHeading empty text", "calls": [{"fn": "summary.addHeading", "args": ["", 2]}, {"fn": "summary.stringify"}]},
+
+  {"name": "summary addSeparator", "calls": [{"fn": "summary.addSeparator"}, {"fn": "summary.stringify"}]},
+  {"name": "summary addBreak", "calls": [{"fn": "summary.addBreak"}, {"fn": "summary.stringify"}]},
+
+  {"name": "summary addQuote", "calls": [{"fn": "summary.addQuote", "args": ["Be kind"]}, {"fn": "summary.stringify"}]},
+  {"name": "summary addQuote with cite", "calls": [{"fn": "summary.addQuote", "args": ["Be kind", "https://x/y"]}, {"fn": "summary.stringify"}]},
+  {"name": "summary addQuote with empty cite", "calls": [{"fn": "summary.addQuote", "args": ["Be kind", ""]}, {"fn": "summary.stringify"}]},
+
+  {"name": "summary addLink", "calls": [{"fn": "summary.addLink", "args": ["site", "https://x/y?a=1&b=2"]}, {"fn": "summary.stringify"}]},
+  {"name": "summary addLink empty text", "calls": [{"fn": "summary.addLink", "args": ["", "https://x"]}, {"fn": "summary.stringify"}]},
+  {"name": "summary no escaping of attributes", "calls": [{"fn": "summary.addLink", "args": ["<i>", "x\"y"]}, {"fn": "summary.stringify"}]},
+
+  {"name": "summary chain of builders", "calls": [
+    {"fn": "summary.addHeading", "args": ["Report", 2]},
+    {"fn": "summary.addList", "args": [["one", "two"], true]},
+    {"fn": "summary.addSeparator"},
+    {"fn": "summary.addLink", "args": ["docs", "https://d"]},
+    {"fn": "summary.isEmptyBuffer"},
+    {"fn": "summary.write"},
+    {"fn": "summary.isEmptyBuffer"}
+  ]},
+
+  {"name": "summary isEmptyBuffer initially", "calls": [{"fn": "summary.isEmptyBuffer"}]},
+  {"name": "summary isEmptyBuffer after add", "calls": [{"fn": "summary.addRaw", "args": ["x"]}, {"fn": "summary.isEmptyBuffer"}]},
+  {"name": "summary isEmptyBuffer after addRaw empty", "calls": [{"fn": "summary.addRaw", "args": [""]}, {"fn": "summary.isEmptyBuffer"}]},
+  {"name": "summary emptyBuffer", "calls": [{"fn": "summary.addRaw", "args": ["x"]}, {"fn": "summary.emptyBuffer"}, {"fn": "summary.isEmptyBuffer"}, {"fn": "summary.stringify"}, {"fn": "summary.write"}]},
+  {"name": "summary emptyBuffer does not touch the file", "calls": [{"fn": "summary.addRaw", "args": ["kept"]}, {"fn": "summary.write"}, {"fn": "summary.addRaw", "args": ["dropped"]}, {"fn": "summary.emptyBuffer"}]},
+
+  {"name": "summary write appends by default", "calls": [{"fn": "summary.addRaw", "args": ["one"]}, {"fn": "summary.write"}, {"fn": "summary.addRaw", "args": ["two"]}, {"fn": "summary.write"}]},
+  {"name": "summary write overwrite true", "calls": [{"fn": "summary.addRaw", "args": ["one"]}, {"fn": "summary.write"}, {"fn": "summary.addRaw", "args": ["two"]}, {"fn": "summary.write", "args": [{"overwrite": true}]}]},
+  {"name": "summary write overwrite false", "calls": [{"fn": "summary.addRaw", "args": ["one"]}, {"fn": "summary.write"}, {"fn": "summary.addRaw", "args": ["two"]}, {"fn": "summary.write", "args": [{"overwrite": false}]}]},
+  {"name": "summary write empty options", "calls": [{"fn": "summary.addRaw", "args": ["one"]}, {"fn": "summary.write", "args": [{}]}]},
+  {"name": "summary write empty buffer", "calls": [{"fn": "summary.write"}]},
+  {"name": "summary write empty buffer overwrite wipes file", "calls": [{"fn": "summary.addRaw", "args": ["one"]}, {"fn": "summary.write"}, {"fn": "summary.write", "args": [{"overwrite": true}]}]},
+  {"name": "summary write buffer survives stringify", "calls": [{"fn": "summary.addRaw", "args": ["one"]}, {"fn": "summary.stringify"}, {"fn": "summary.stringify"}, {"fn": "summary.write"}, {"fn": "summary.stringify"}]},
+  {"name": "summary write twice appends nothing the second time", "calls": [{"fn": "summary.addRaw", "args": ["one"]}, {"fn": "summary.write"}, {"fn": "summary.write"}]},
+
+  {"name": "summary clear", "calls": [{"fn": "summary.addRaw", "args": ["old"]}, {"fn": "summary.write"}, {"fn": "summary.addRaw", "args": ["pending"]}, {"fn": "summary.clear"}, {"fn": "summary.isEmptyBuffer"}]},
+  {"name": "summary clear then write", "calls": [{"fn": "summary.addRaw", "args": ["old"]}, {"fn": "summary.write"}, {"fn": "summary.clear"}, {"fn": "summary.addRaw", "args": ["new"]}, {"fn": "summary.write"}]},
+
+  {"name": "summary write without GITHUB_STEP_SUMMARY", "noFiles": true, "calls": [{"fn": "summary.addRaw", "args": ["x"]}, {"fn": "summary.write"}, {"fn": "summary.stringify"}]},
+  {"name": "summary clear without GITHUB_STEP_SUMMARY", "noFiles": true, "calls": [{"fn": "summary.clear"}]},
+  {"name": "summary write with empty GITHUB_STEP_SUMMARY", "env": {"GITHUB_STEP_SUMMARY": ""}, "calls": [{"fn": "summary.addRaw", "args": ["x"]}, {"fn": "summary.write"}]},
+  {"name": "summary write to missing file", "env": {"GITHUB_STEP_SUMMARY": "/nonexistent-parity-dir/summary.md"}, "calls": [{"fn": "summary.addRaw", "args": ["x"]}, {"fn": "summary.write"}, {"fn": "summary.stringify"}]},
+  {"name": "summary failed write keeps the buffer", "env": {"GITHUB_STEP_SUMMARY": "/nonexistent-parity-dir/summary.md"}, "calls": [{"fn": "summary.addRaw", "args": ["x"]}, {"fn": "summary.write"}, {"fn": "summary.isEmptyBuffer"}]}
+]

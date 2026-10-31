@@ -2,6 +2,7 @@ package core
 
 import (
 	"bytes"
+	"os"
 	"runtime"
 	"testing"
 
@@ -150,6 +151,34 @@ func TestGetMultilineInput(t *testing.T) {
 		result := GetMultilineInput("my-input")
 		assert.Equal(t, []string{"a", "b"}, result)
 	})
+
+	// @actions/core drops empty lines first and trims the rest, so a line of
+	// blanks stays as an empty value
+	t.Run("keeps lines of blanks as empty values", func(t *testing.T) {
+		origLookup := lookupEnv
+		t.Cleanup(func() { lookupEnv = origLookup })
+		lookupEnv = func(name string) (string, bool) { return "a\n  \nb", true }
+		assert.Equal(t, []string{"a", "", "b"}, GetMultilineInput("my-input"))
+	})
+}
+
+// the expected trimming is that of JavaScript's String.prototype.trim
+func TestTrimJS(t *testing.T) {
+	blanks := string([]rune{0xFEFF, 0xA0, 0x2003, 0x3000, 0x2028, 0x2029, '\t', '\v', '\f', '\r', '\n', ' '})
+	assert.Equal(t, "v", trimJS(blanks+"v"+blanks))
+	assert.Equal(t, "\u0085v\u0085", trimJS("\u0085v\u0085"), "U+0085 is not JavaScript whitespace")
+	assert.Equal(t, "a  b", trimJS("  a  b  "))
+}
+
+func TestAddPathWithoutExistingPath(t *testing.T) {
+	t.Setenv("PATH", "")
+	t.Setenv(GitHubPathFilePathEnvName, "")
+	os.Unsetenv(GitHubPathFilePathEnvName)
+	origStdout := stdout
+	t.Cleanup(func() { stdout = origStdout })
+	stdout = bytes.NewBuffer(nil)
+	AddPath("/opt/tool")
+	assert.Equal(t, "/opt/tool", os.Getenv("PATH"), "no empty entry, which would mean the current directory")
 }
 
 func TestPathUtils(t *testing.T) {

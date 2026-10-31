@@ -48,19 +48,24 @@ func (s *Summary) getFilePath() (string, error) {
 	}
 	p, ok := os.LookupEnv(GitHubSummaryPathEnvName)
 	if !ok || p == "" {
-		return "", fmt.Errorf("unable to find environment variable for $%s. Check if your runtime environment supports job summaries", GitHubSummaryPathEnvName)
+		// the messages are those of @actions/core, which callers may match on
+		return "", fmt.Errorf("Unable to find environment variable for $%s. Check if your runtime environment supports job summaries.", GitHubSummaryPathEnvName) //nolint:staticcheck
 	}
 	if _, err := os.Stat(p); err != nil {
-		return "", fmt.Errorf("unable to access summary file: %q. Check if the file has correct read/write permissions", p)
+		return "", fmt.Errorf("Unable to access summary file: '%s'. Check if the file has correct read/write permissions.", p) //nolint:staticcheck
 	}
 	s.filePath = p
 	return s.filePath, nil
 }
 
-func (s *Summary) wrap(tag, content string, attrs map[string]string) string {
+// attr is an HTML attribute. Attributes are rendered in the order they are given,
+// like @actions/core does, so the output is deterministic.
+type attr struct{ name, value string }
+
+func (s *Summary) wrap(tag, content string, attrs ...attr) string {
 	var attrStr strings.Builder
-	for k, v := range attrs {
-		fmt.Fprintf(&attrStr, ` %s="%s"`, k, v)
+	for _, a := range attrs {
+		fmt.Fprintf(&attrStr, ` %s="%s"`, a.name, a.value)
 	}
 	if content == "" {
 		return fmt.Sprintf("<%s%s>", tag, attrStr.String())
@@ -132,11 +137,11 @@ func (s *Summary) AddEOL() *Summary {
 // AddCodeBlock adds an HTML code block to the buffer.
 // lang is an optional language for syntax highlighting.
 func (s *Summary) AddCodeBlock(code string, lang ...string) *Summary {
-	attrs := map[string]string{}
+	var attrs []attr
 	if len(lang) > 0 && lang[0] != "" {
-		attrs["lang"] = lang[0]
+		attrs = append(attrs, attr{"lang", lang[0]})
 	}
-	element := s.wrap("pre", s.wrap("code", code, nil), attrs)
+	element := s.wrap("pre", s.wrap("code", code), attrs...)
 	return s.AddRaw(element, true)
 }
 
@@ -149,9 +154,9 @@ func (s *Summary) AddList(items []string, ordered ...bool) *Summary {
 	}
 	var listItems strings.Builder
 	for _, item := range items {
-		listItems.WriteString(s.wrap("li", item, nil))
+		listItems.WriteString(s.wrap("li", item))
 	}
-	element := s.wrap(tag, listItems.String(), nil)
+	element := s.wrap(tag, listItems.String())
 	return s.AddRaw(element, true)
 }
 
@@ -166,39 +171,39 @@ func (s *Summary) AddTable(rows [][]SummaryTableCell) *Summary {
 			if cell.Header {
 				tag = "th"
 			}
-			attrs := map[string]string{}
+			var attrs []attr
 			if cell.Colspan != "" {
-				attrs["colspan"] = cell.Colspan
+				attrs = append(attrs, attr{"colspan", cell.Colspan})
 			}
 			if cell.Rowspan != "" {
-				attrs["rowspan"] = cell.Rowspan
+				attrs = append(attrs, attr{"rowspan", cell.Rowspan})
 			}
-			cells.WriteString(s.wrap(tag, cell.Data, attrs))
+			cells.WriteString(s.wrap(tag, cell.Data, attrs...))
 		}
-		tableBody.WriteString(s.wrap("tr", cells.String(), nil))
+		tableBody.WriteString(s.wrap("tr", cells.String()))
 	}
-	element := s.wrap("table", tableBody.String(), nil)
+	element := s.wrap("table", tableBody.String())
 	return s.AddRaw(element, true)
 }
 
 // AddDetails adds a collapsible HTML details element.
 func (s *Summary) AddDetails(label, content string) *Summary {
-	element := s.wrap("details", s.wrap("summary", label, nil)+content, nil)
+	element := s.wrap("details", s.wrap("summary", label)+content)
 	return s.AddRaw(element, true)
 }
 
 // AddImage adds an HTML image tag.
 func (s *Summary) AddImage(src, alt string, options ...SummaryImageOptions) *Summary {
-	attrs := map[string]string{"src": src, "alt": alt}
+	attrs := []attr{{"src", src}, {"alt", alt}}
 	if len(options) > 0 {
 		if options[0].Width != "" {
-			attrs["width"] = options[0].Width
+			attrs = append(attrs, attr{"width", options[0].Width})
 		}
 		if options[0].Height != "" {
-			attrs["height"] = options[0].Height
+			attrs = append(attrs, attr{"height", options[0].Height})
 		}
 	}
-	element := s.wrap("img", "", attrs)
+	element := s.wrap("img", "", attrs...)
 	return s.AddRaw(element, true)
 }
 
@@ -209,32 +214,32 @@ func (s *Summary) AddHeading(text string, level ...int) *Summary {
 		lvl = level[0]
 	}
 	tag := fmt.Sprintf("h%d", lvl)
-	element := s.wrap(tag, text, nil)
+	element := s.wrap(tag, text)
 	return s.AddRaw(element, true)
 }
 
 // AddSeparator adds an HTML thematic break (<hr>).
 func (s *Summary) AddSeparator() *Summary {
-	return s.AddRaw(s.wrap("hr", "", nil), true)
+	return s.AddRaw(s.wrap("hr", ""), true)
 }
 
 // AddBreak adds an HTML line break (<br>).
 func (s *Summary) AddBreak() *Summary {
-	return s.AddRaw(s.wrap("br", "", nil), true)
+	return s.AddRaw(s.wrap("br", ""), true)
 }
 
 // AddQuote adds an HTML blockquote. cite is an optional citation URL.
 func (s *Summary) AddQuote(text string, cite ...string) *Summary {
-	attrs := map[string]string{}
+	var attrs []attr
 	if len(cite) > 0 && cite[0] != "" {
-		attrs["cite"] = cite[0]
+		attrs = append(attrs, attr{"cite", cite[0]})
 	}
-	element := s.wrap("blockquote", text, attrs)
+	element := s.wrap("blockquote", text, attrs...)
 	return s.AddRaw(element, true)
 }
 
 // AddLink adds an HTML anchor tag.
 func (s *Summary) AddLink(text, href string) *Summary {
-	element := s.wrap("a", text, map[string]string{"href": href})
+	element := s.wrap("a", text, attr{"href", href})
 	return s.AddRaw(element, true)
 }

@@ -2,5 +2,10 @@
   {"scenario": "getInput required missing", "reason": "GetInput has no `required` option; it returns (value, found) and the caller decides. Changing the signature would break the public API."},
   {"scenario": "getInput trimWhitespace false", "reason": "GetInput always trims and has no options parameter (public API)."},
   {"scenario": "getBooleanInput invalid", "reason": "GetBoolInput returns false for an invalid value where JS throws a TypeError; Go has no error return (public API)."},
-  {"scenario": "getBooleanInput missing", "reason": "GetBoolInput returns false for an unset input where JS throws a TypeError; Go has no error return (public API)."}
+  {"scenario": "getBooleanInput missing", "reason": "GetBoolInput returns false for an unset input where JS throws a TypeError; Go has no error return (public API)."},
+  {"scenario": "group returns the callback result", "reason": "Group takes a func() and returns a deprecated no-op func(); JS group is generic and resolves to the callback's result. Returning the result would change the public signature."},
+  {"scenario": "error with empty title", "reason": "JS prints '::error ::m' (a stray space) when the properties object has keys whose values are all empty. Go's AnnotationProperties is a struct whose zero value cannot be told apart from 'no properties', so it prints '::error::m'. The runner parses both identically."},
+  {"scenario": "error with an unrelated property", "reason": "Same as 'error with empty title': JS prints a stray space for a properties object with only unknown keys; the Go struct has no such notion (public API). The runner parses both identically."},
+  {"scenario": "addPath without PATH", "reason": "Deliberate: JS builds '<dir>:undefined' (the text 'undefined') when PATH is unset. Go sets PATH to '<dir>' alone: a literal 'undefined' entry is a relative directory name, and a trailing separator would mean the current directory."},
+  {"scenario": "addPath without PATH nor file", "reason": "Same as 'addPath without PATH' (the add-path command is printed identically; only the resulting PATH differs)."}
 ]

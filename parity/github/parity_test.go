@@ -30,7 +30,7 @@ import (
 	"testing"
 
 	gh "github.com/actions-go/toolkit/github"
-	gogithub "github.com/google/go-github/v42/github"
+	gogithub "github.com/google/go-github/v74/github"
 )
 
 type scenario struct {
@@ -152,11 +152,12 @@ type recorder struct {
 
 // headers that say nothing about the toolkit: connection handling, content
 // negotiation defaults of the HTTP stack, the host the server is on, and the
-// per-endpoint media type that octokit and go-github each pick for themselves.
+// per-endpoint media type and the REST API version that octokit and go-github
+// each pick for themselves (go-github v74 sends X-GitHub-Api-Version, v42 did not).
 var ignoredHeaders = map[string]bool{
 	"host": true, "connection": true, "keep-alive": true, "content-length": true,
 	"accept-encoding": true, "accept-language": true, "sec-fetch-mode": true,
-	"transfer-encoding": true, "accept": true,
+	"transfer-encoding": true, "accept": true, "x-github-api-version": true,
 }
 
 // the user agent starts with the name of the HTTP library (octokit-core.js,
