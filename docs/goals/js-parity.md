@@ -67,6 +67,12 @@ Results: `core` 291 scenarios, `github` 70, `cache` 217. Each comparison found r
 
 Not covered, by design: `extract7z`/`extractXar` (need external binaries), `downloadTool` auth/headers (no Go API). Tar, zip and the manifest functions are being added in a separate PR.
 
+## Open at the end of the session (hand-off)
+
+- **PR #103 (tar/zip/manifest) is red on CI, not merged.** All `getManifestFromRepo` scenarios fail when the proxy environment variables are unset: the reference answers `Protocol "http:" not supported. Expected "https:"` and Go returns the manifest. They pass in the agent sandbox only because `HTTPS_PROXY` is set there, which changes the agent http-client builds. Reproduce with `env -u HTTPS_PROXY -u https_proxy -u HTTP_PROXY -u http_proxy -u ALL_PROXY -u all_proxy PARITY_REQUIRED=1 go test ./parity/cache/`. The `https.request` patch in `parity/js/toolcache-driver.mjs` (it redirects api.github.com to the local server) is the suspect; making the options plain `http:` was tried and did not fix it. Next step: log the options the reference passes to `https.request` without a proxy, or serve the local server over https with a throwaway certificate and `NODE_EXTRA_CA_CERTS` instead of patching.
+- **PR #102 (exit status, OS matrix, Windows EOL fixes)**: Windows failed in `parity/cache` on directory modes (`0666` vs `0777`); fixed in `9cfae17` (modes not compared on Windows). That run, and the macOS/Windows runs of #103's tar/zip scenarios, had not reported when the session ended.
+- Lesson: run the parity suites once with the proxy variables unset before pushing; CI has none and the sandbox does.
+
 ## Running locally
 
 ```bash
