@@ -39,6 +39,18 @@ Both record stdout (workflow commands), the contents of the `GITHUB_OUTPUT`/`ENV
 - Pre-existing, unrelated failures on main: `cache` `TestEnsureDestDir` (running as root) and `github` `TestClient` (needs `GITHUB_TOKEN`).
 - Not covered yet: `summary`, `getIDToken`, `group`, `platform`, `github` and `cache` packages.
 
+## Phase 2: cover everything (goal: "suite merged on main should cover everything")
+
+M1 (merged, #94) covered the simple `core` API. Phase 2 sub-goals, built in parallel in separate worktrees with disjoint files:
+
+| Area | Reference | Location |
+|---|---|---|
+| rest of `core` (summary, group, platform, getIDToken, stop/startCommands, edge cases) | @actions/core 3.0.1 | `parity/` |
+| `github` (Context, user agent, client defaults) | @actions/github 9.1.1 | `parity/github/` |
+| `cache` (port of tool-cache) | @actions/tool-cache 4.0.0 | `parity/cache/` |
+
+Out of scope by construction: Go-only helpers with no JS equivalent (`DownloadSelectedRepositoryFiles`, `MatchesOneOf`, `core/artifacts.go`, actions-go JSON inputs). The package name `cache` is tool-cache, not @actions/cache.
+
 ## Running locally
 
 ```bash
