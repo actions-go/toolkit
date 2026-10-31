@@ -20,6 +20,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"sort"
 	"strconv"
 	"strings"
@@ -191,6 +192,11 @@ func snapshot(t *testing.T, root string) map[string]node {
 		}
 		rel = filepath.ToSlash(rel)
 		mode := fmt.Sprintf("0%o", info.Mode().Perm())
+		if runtime.GOOS == "windows" {
+			// Windows has no Unix permission bits: Go and node report different
+			// placeholders (0666 vs 0777), so modes are not compared there
+			mode = ""
+		}
 		switch {
 		case info.Mode()&os.ModeSymlink != 0:
 			target, err := os.Readlink(p)
@@ -433,6 +439,9 @@ func umaskModes(t *testing.T) (dir, file string) {
 // cacheFile (copy to <cache>/<tool>/<version>/<arch>/<target>, then write the
 // empty <arch>.complete marker), and both implementations must produce it.
 func TestHarnessMatchesHandWorkedAnswer(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("the hand-worked answer contains Unix permission bits")
+	}
 	sc := scenario{
 		Name:  "hand worked",
 		Src:   []entry{{Path: "a.txt", Content: "x"}},
