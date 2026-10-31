@@ -140,6 +140,11 @@ func nodeArch(goarch string) string {
 }
 
 // runCommand executes a command and returns its combined stdout output.
+//
+// The executable is looked up by exec.Command (exec.LookPath), which differs
+// from @actions/io's findInPath; only the error text for a missing executable
+// matches. This is an accepted gap, see "Accepted gap" in
+// docs/goals/js-parity.md.
 var runCommand = func(name string, args ...string) (string, error) {
 	out, err := exec.Command(name, args...).Output()
 	if errors.Is(err, exec.ErrNotFound) {

@@ -80,6 +80,15 @@ Narrowed on purpose after the first macOS and Windows runs:
 
 `platform getDetails without PATH` runs on all three systems now. The Windows difference was not about PATH: both sides fail with "Unable to locate executable file: powershell", but Go printed the Unix hint ("Also check the file mode...") where `@actions/io` prints the Windows one ("Also verify the file has a valid extension..."). Fixed in `core/platform.go` and `cache/extract.go`. The same Windows run also showed that `CacheFile`'s `..` hardening split targets on the OS separator only and did not work on Windows.
 
+Accepted gap (decided with the user): how an executable is looked up. The error text for a missing executable matches `@actions/io`, but the lookup itself uses Go's `exec.LookPath` (in `core/platform.go` and `cache/extract.go`) and differs from `findInPath` / `tryGetExecutablePath`:
+- Unix: `@actions/io` accepts a file only if an execute bit applies to the current user (other; group with a matching gid; owner with a matching uid). `LookPath` accepts any execute bit.
+- Windows: `@actions/io` tries the bare name and then the name plus each `PATHEXT` entry, and tries no extension when `PATHEXT` is unset; it restores the file's real letter case. `LookPath` has a built-in default extension list and does not restore case.
+- A name with a path separator that is not an absolute path: `@actions/io` finds nothing; `LookPath` tries it relative to the current directory.
+- Empty `PATH` entries: skipped by `@actions/io`; `LookPath` treats them as the current directory.
+- The current directory is never searched by `@actions/io`; `LookPath` on Windows has its own rule for it.
+- The returned path is the `PATH` directory joined with the name; our `which` in `cache` makes it absolute.
+None of the parity scenarios exercises these cases (they cover the error text and an unset `PATH`). If this ever matters: port `findInPath` into one internal function used by both packages and add scenarios that call `@actions/io`'s `which` directly; Windows behaviour can only be proven on the Windows CI leg.
+
 Not covered, by design: xz/zstd tar archives (no standard library decoder; Go returns an explicit "unsupported" error), `downloadTool` auth/headers (no Go API), and the Go-only helpers (`DownloadSelectedRepositoryFiles`, `MatchesOneOf`, `core/artifacts.go`).
 
 Tar, zip and manifest hang trap: a reference call that never finishes (a tar waiting on stdin under bsdtar) hung the macOS job for the full 10 minute `go test` timeout with no scenario named. The cache driver now fails any reference call after 60 seconds, naming the scenario.
