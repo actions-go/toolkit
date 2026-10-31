@@ -300,6 +300,8 @@ func invoke(t *testing.T, d dirs, c call) ret {
 			}
 		}
 		return result1(cache.ExtractTar(a(0), a(1), flags...))
+	case "extractZip":
+		return result1(cache.ExtractZip(a(0), a(1)))
 	default:
 		t.Fatalf("no Go adapter for %q", c.Fn)
 	}
@@ -433,7 +435,23 @@ var toolDiagnostic = regexp.MustCompile(`(?m)^(?:\S*/(?:tar|unzip)|tar \(child\)
 // belongs to the tool installed (GNU tar, bsdtar, Info-ZIP...), not to the
 // package: the Go port reads archives itself and only reports failure through
 // the error it returns, which is compared.
-func dropToolDiagnostics(stdout string) string {
+//
+// Without RUNNER_DEBUG unzip is run with -q and prints nothing but problems,
+// so everything that is not a workflow command or the command line is one.
+func dropToolDiagnostics(sc scenario, stdout string) string {
+	var quietUnzip bool
+	for _, r := range sc.Requires {
+		quietUnzip = quietUnzip || r == "unzip"
+	}
+	if quietUnzip && sc.Env["RUNNER_DEBUG"] != "1" {
+		var kept []string
+		for _, line := range strings.SplitAfter(stdout, "\n") {
+			if strings.HasPrefix(line, "::") || strings.HasPrefix(line, "[command]") {
+				kept = append(kept, line)
+			}
+		}
+		return strings.Join(kept, "")
+	}
 	return toolDiagnostic.ReplaceAllString(stdout, "")
 }
 
@@ -587,7 +605,7 @@ func TestParityWithReferenceToolCache(t *testing.T) {
 			got := runGo(t, sc, srv.URL)
 			gn, wn := got.normalise(srv.URL), want.normalise(srv.URL)
 			if len(sc.Requires) > 0 {
-				gn.Stdout, wn.Stdout = dropToolDiagnostics(gn.Stdout), dropToolDiagnostics(wn.Stdout)
+				gn.Stdout, wn.Stdout = dropToolDiagnostics(sc, gn.Stdout), dropToolDiagnostics(sc, wn.Stdout)
 			}
 			g, _ := json.MarshalIndent(gn, "", "  ")
 			w, _ := json.MarshalIndent(wn, "", "  ")
