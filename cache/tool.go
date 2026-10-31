@@ -7,16 +7,15 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	"sort"
-	"strings"
 
-	"github.com/Masterminds/semver/v3"
 	"github.com/actions-go/toolkit/core"
 	"github.com/google/uuid"
 )
 
 const (
-	cachePerms = 0755
+	// cachePerms is the mode of created directories before the umask applies,
+	// like fs.mkdir of node.
+	cachePerms = 0o777
 )
 
 // DownloadToolOptions defines available options to download tools
@@ -57,13 +56,6 @@ func ensureDestDir(dest string) error {
 		return fmt.Errorf("Unable to create destination directory %s: %v", destDir, err)
 	}
 	return nil
-}
-
-func createEmptyCache(folder string) error {
-	if err := os.RemoveAll(folder); err != nil {
-		return err
-	}
-	return os.MkdirAll(folder, cachePerms)
 }
 
 func ensureDestNotExists(dest string) error {
@@ -127,18 +119,20 @@ func toolPath(options CacheOptions) string {
 	return filepath.Join(cacheDirectory(), options.Tool, options.Version, options.Arch)
 }
 
-func cleanSemver(version string) string {
-	return strings.TrimPrefix(version, "=v")
-}
-
 func defaultOptions(options CacheOptions) (CacheOptions, error) {
 	if options.Tool == "" {
 		return options, fmt.Errorf("missing tool name to cache in options.Tool")
 	}
 	if options.Version == "" {
-		return options, fmt.Errorf("missing tool name to cache in options.Version")
+		return options, fmt.Errorf("missing tool version to cache in options.Version")
 	}
 	options.Version = cleanSemver(options.Version)
+	return withDefaultArch(options), nil
+}
+
+// withDefaultArch sets the machine architecture when none is given,
+// as node's os.arch() unless UseJavascriptValues is false.
+func withDefaultArch(options CacheOptions) CacheOptions {
 	if options.UseJavascriptValues == nil {
 		options.UseJavascriptValues = Bool(true)
 	}
@@ -149,152 +143,7 @@ func defaultOptions(options CacheOptions) (CacheOptions, error) {
 			options.Arch = runtime.GOARCH
 		}
 	}
-	return options, nil
-}
-
-func noRel(path string) string {
-	p := strings.Split(path, string(filepath.Separator))
-	// In case the source is provided
-	for len(p) > 0 && (p[0] == ".." || p[0] == ".") {
-		p = p[1:]
-	}
-	return filepath.Join(p...)
-}
-
-func cache(source, target string, options CacheOptions) (string, error) {
-	destFolder := toolPath(options)
-	completeMarker := destFolder + ".complete"
-	wrapError := func(err error, format string, args ...interface{}) (string, error) {
-		return "", fmt.Errorf("failed to save "+source+" to cache "+format+" : %v", append(args, err)...)
-	}
-	options, err := defaultOptions(options)
-	if err != nil {
-		return wrapError(err, "invalid options")
-	}
-	core.Debugf(`destination file %s`, destFolder)
-	err = createEmptyCache(destFolder)
-	if err != nil {
-		return wrapError(err, "")
-	}
-	err = os.Remove(completeMarker)
-	if err != nil && !os.IsNotExist(err) {
-		return wrapError(err, "")
-	}
-	// Ensure provided arguments are namespaced to the destFolder
-	target = noRel(target)
-	err = filepath.Walk(source, func(path string, info os.FileInfo, err error) error {
-		if info.IsDir() {
-			return nil
-		}
-		destination := filepath.Join(destFolder, target)
-		r, err := filepath.Rel(source, path)
-		if err == nil && r != "." {
-			destination = filepath.Join(destination, r)
-		}
-		core.Debugf("copying %s to %s", path, destination)
-		return copyFile(destination, path)
-	})
-	if err != nil {
-		return wrapError(err, "failed to copy all files")
-	}
-	fd, err := os.Create(completeMarker)
-	if err != nil {
-		return wrapError(err, "failed to mark copy complete")
-	}
-	fd.Close()
-	return destFolder, nil
-}
-
-func copyFile(dest, src string) error {
-	in, err := os.Open(src)
-	if err != nil {
-		return err
-	}
-	err = os.MkdirAll(filepath.Dir(dest), cachePerms)
-	if err != nil {
-		return err
-	}
-	out, err := os.Create(dest)
-	if err != nil {
-		return err
-	}
-	stat, err := os.Stat(src)
-	if err != nil {
-		return err
-	}
-	err = os.Chmod(dest, stat.Mode())
-	if err != nil {
-		return err
-	}
-	_, err = io.Copy(out, in)
-	return err
-}
-
-// CacheFile caches a downloaded file (GUID) and installs it
-// into the tool cache with a given targetName
-func CacheFile(source, target string, options CacheOptions) (string, error) {
-	return cache(source, target, options)
-}
-
-// CacheDir caches a directory and installs it into the tool cacheDir
-// with a given targetName
-func CacheDir(source string, options CacheOptions) (string, error) {
-	return cache(source, "", options)
-}
-
-// ListAllCachedVersions discovers all versions available in cache
-func ListAllCachedVersions(options CacheOptions) []string {
-	if options.Tool == "" {
-		core.Errorf("missing tool name to list versions")
-		return []string{}
-	}
-	options.Version = "*"
-	matched, err := filepath.Glob(toolPath(options))
-	if err != nil {
-		core.Warningf("unable to list cached versions: %v", err)
-		return []string{}
-	}
-	versions := []string{}
-	for _, match := range matched {
-		p, err := filepath.Rel(filepath.Join(cacheDirectory(), options.Tool), match)
-		if err == nil {
-			versions = append(versions, strings.SplitN(p, string(filepath.Separator), 2)[0])
-		} else {
-			core.Warningf("error getting version, unable to get relative path from %s to %s: %v", match, filepath.Join(cacheDirectory(), options.Tool), err)
-		}
-	}
-	return versions
-}
-
-// FindVersion finds the path to a tool version in the local installed tool cache
-// by matching the pattern provided in the Version field
-func FindVersion(options CacheOptions) (string, error) {
-	versions := semver.Collection{}
-	constraint, err := semver.NewConstraint(options.Version)
-	if err != nil {
-		return "", err
-	}
-	for _, v := range ListAllCachedVersions(options) {
-		s, err := semver.NewVersion(v)
-		if err == nil {
-			versions = append(versions, s)
-		} else {
-			core.Warningf("failed to parse version %s: %v", v, err)
-		}
-	}
-
-	sort.Sort(versions)
-	for i := len(versions) - 1; i >= 0; i-- {
-		version := versions[i]
-		if constraint.Check(version) {
-			options.Version = version.Original()
-			path := toolPath(options)
-			if _, err := os.Stat(path); err == nil {
-				return toolPath(options), nil
-			}
-		}
-	}
-	return "", fmt.Errorf("could not find any cached version for %s matching %s", options.Tool, options.Version)
+	return options
 }
 
 // DownloadTool Download a tool from an url and stream it into a file

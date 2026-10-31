@@ -1,0 +1,7 @@
+[
+  {"scenario": "cacheFile target escaping the tool folder", "reason": "CacheFile strips leading '..' and '.' segments from the target so that a target can never be written outside the tool folder; @actions/tool-cache joins the path verbatim and writes ../escaped.txt next to the architecture folder. Deliberate hardening, kept."},
+  {"scenario": "cacheDir empty tool name", "reason": "CacheOptions.Tool is validated and an error is returned; @actions/tool-cache accepts '' and caches straight into the root of the tool cache. Kept: the Go options struct makes an unset field indistinguishable from an empty one."},
+  {"scenario": "cacheDir empty version", "reason": "CacheOptions.Version is validated and an error is returned; @actions/tool-cache accepts '' and caches into <tool>/<arch>. Kept: an unset field is indistinguishable from an empty one in the Go options struct."},
+  {"scenario": "cacheFile empty tool name", "reason": "Same as 'cacheDir empty tool name': CacheOptions.Tool is validated in Go."},
+  {"scenario": "cacheFile empty version", "reason": "Same as 'cacheDir empty version': CacheOptions.Version is validated in Go."}
+]

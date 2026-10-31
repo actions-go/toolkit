@@ -89,14 +89,13 @@ func TestCacheFile(t *testing.T) {
 
 	path, err = CacheFile("tool.go", "my-tool.go", CacheOptions{Tool: "some-tool", Version: "0.1.0"})
 	assert.NoError(t, err)
-	assert.Equal(t, filepath.Join(cacheRoot, "some-tool", "0.1.0"), path)
+	assert.Equal(t, filepath.Join(cacheRoot, "some-tool", "0.1.0", jsArch()), path)
 	assert.FileExists(t, filepath.Join(path, "my-tool.go"))
+	assert.FileExists(t, path+".complete")
 
 	path, err = CacheFile("../core", "source", CacheOptions{Tool: "some-other-tool", Version: "0.1.0"})
-	assert.NoError(t, err)
-	assert.Equal(t, filepath.Join(cacheRoot, "some-other-tool", "0.1.0"), path)
-	assert.FileExists(t, filepath.Join(path, "source", "core.go"))
-	assert.FileExists(t, path+".complete")
+	assert.EqualError(t, err, "sourceFile is not a file")
+	assert.Equal(t, "", path)
 }
 
 func TestListAllCachedVersions(t *testing.T) {
@@ -104,40 +103,63 @@ func TestListAllCachedVersions(t *testing.T) {
 	defer os.RemoveAll(cacheRoot)
 
 	assert.Equal(t, []string{}, ListAllCachedVersions(CacheOptions{Tool: "some-tool"}))
-	os.MkdirAll(filepath.Join(cacheRoot, "some-tool", "1.203.2", "x86"), cachePerms)
-	os.MkdirAll(filepath.Join(cacheRoot, "some-tool", "1.204.2", "x86"), cachePerms)
-	os.MkdirAll(filepath.Join(cacheRoot, "some-tool", "1.205.2", "386"), cachePerms)
-	versions := ListAllCachedVersions(CacheOptions{Tool: "some-tool"})
-	assert.Len(t, versions, 3)
-	assert.Contains(t, versions, "1.203.2")
-	assert.Contains(t, versions, "1.204.2")
-	assert.Contains(t, versions, "1.205.2")
+	fakeCached(t, "some-tool", "1.203.2", "x86")
+	fakeCached(t, "some-tool", "1.204.2", "x86")
+	fakeCached(t, "some-tool", "1.205.2", "386")
+	// not completed, or not a version: not listed
+	os.MkdirAll(filepath.Join(cacheRoot, "some-tool", "1.206.0", "386"), cachePerms)
+	fakeCached(t, "some-tool", "latest", "386")
+
+	versions := ListAllCachedVersions(CacheOptions{Tool: "some-tool", Arch: "x86"})
+	assert.ElementsMatch(t, []string{"1.203.2", "1.204.2"}, versions)
 
 	versions = ListAllCachedVersions(CacheOptions{Tool: "some-tool", Arch: "386"})
-	assert.Len(t, versions, 1)
-	assert.Contains(t, versions, "1.205.2")
+	assert.Equal(t, []string{"1.205.2"}, versions)
+
+	fakeCached(t, "some-tool", "1.207.0", jsArch())
+	assert.Equal(t, []string{"1.207.0"}, ListAllCachedVersions(CacheOptions{Tool: "some-tool"}))
+}
+
+// fakeCached creates the folder and the marker of a cached tool version.
+func fakeCached(t *testing.T, tool, version, arch string) {
+	t.Helper()
+	folder := filepath.Join(cacheRoot, tool, version, arch)
+	assert.NoError(t, os.MkdirAll(folder, cachePerms))
+	assert.NoError(t, os.WriteFile(folder+".complete", nil, 0o644))
 }
 
 func TestFindVersions(t *testing.T) {
 	cacheRoot = "test-cache-root-" + uuid.New().String()
 	defer os.RemoveAll(cacheRoot)
-	os.MkdirAll(filepath.Join(cacheRoot, "some-tool", "1.203.2", "x86"), cachePerms)
-	os.MkdirAll(filepath.Join(cacheRoot, "some-tool", "1.204.2", "x86"), cachePerms)
-	os.MkdirAll(filepath.Join(cacheRoot, "some-tool", "1.205.2", "386"), cachePerms)
-	os.MkdirAll(filepath.Join(cacheRoot, "some-tool", "1.205.2", "x86"), cachePerms)
-	os.MkdirAll(filepath.Join(cacheRoot, "some-tool", "1.205.3", "x86"), cachePerms)
+	fakeCached(t, "some-tool", "1.203.2", "x86")
+	fakeCached(t, "some-tool", "1.204.2", "x86")
+	fakeCached(t, "some-tool", "1.205.2", "386")
+	fakeCached(t, "some-tool", "1.205.2", "x86")
+	fakeCached(t, "some-tool", "1.205.3", "x86")
 
 	path, err := FindVersion(CacheOptions{Tool: "some-tool"})
-	assert.Error(t, err)
+	assert.EqualError(t, err, "versionSpec parameter is required")
 	assert.Equal(t, "", path)
 
-	path, err = FindVersion(CacheOptions{Tool: "some-tool", Version: "~1.205"})
+	path, err = FindVersion(CacheOptions{Version: "1.x"})
+	assert.EqualError(t, err, "toolName parameter is required")
+	assert.Equal(t, "", path)
+
+	path, err = FindVersion(CacheOptions{Tool: "some-tool", Version: "~1.205", Arch: "x86"})
 	assert.NoError(t, err)
-	assert.Equal(t, filepath.Join(cacheRoot, "some-tool", "1.205.3"), path)
+	assert.Equal(t, filepath.Join(cacheRoot, "some-tool", "1.205.3", "x86"), path)
 
 	path, err = FindVersion(CacheOptions{Tool: "some-tool", Version: "~1.205", Arch: "386"})
 	assert.NoError(t, err)
 	assert.Equal(t, filepath.Join(cacheRoot, "some-tool", "1.205.2", "386"), path)
+
+	path, err = FindVersion(CacheOptions{Tool: "some-tool", Version: "1.205.2", Arch: "386"})
+	assert.NoError(t, err)
+	assert.Equal(t, filepath.Join(cacheRoot, "some-tool", "1.205.2", "386"), path)
+
+	path, err = FindVersion(CacheOptions{Tool: "some-tool", Version: "2.x", Arch: "386"})
+	assert.EqualError(t, err, "could not find any cached version for some-tool matching 2.x")
+	assert.Equal(t, "", path)
 }
 
 func TestCacheDir(t *testing.T) {
@@ -146,8 +168,33 @@ func TestCacheDir(t *testing.T) {
 
 	path, err := CacheDir("../core", CacheOptions{Tool: "some-other-tool", Version: "0.1.0"})
 	assert.NoError(t, err)
-	assert.Equal(t, filepath.Join(cacheRoot, "some-other-tool", "0.1.0"), path)
+	assert.Equal(t, filepath.Join(cacheRoot, "some-other-tool", "0.1.0", jsArch()), path)
 	assert.FileExists(t, filepath.Join(path, "core.go"))
+	assert.FileExists(t, path+".complete")
+
+	path, err = CacheDir("tool.go", CacheOptions{Tool: "some-other-tool", Version: "0.1.0"})
+	assert.EqualError(t, err, "sourceDir is not a directory")
+	assert.Equal(t, "", path)
+}
+
+func TestCleanSemver(t *testing.T) {
+	for in, want := range map[string]string{
+		"1.2.3":            "1.2.3",
+		"v1.2.3":           "1.2.3",
+		"=v1.2.3":          "1.2.3",
+		"  1.2.3 ":         "1.2.3",
+		"1.2.3+build":      "1.2.3",
+		"1.2.3-rc.1+b":     "1.2.3-rc.1",
+		"1.2":              "1.2",
+		"latest":           "latest",
+		"01.2.3":           "01.2.3",
+		"1.2.3-01":         "1.2.3-01",
+		"V1.2.3":           "V1.2.3",
+		"1.2.3.4":          "1.2.3.4",
+		"1.2.3-alpha.beta": "1.2.3-alpha.beta",
+	} {
+		assert.Equal(t, want, cleanSemver(in), in)
+	}
 }
 
 func TestCopyURL(t *testing.T) {

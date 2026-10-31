@@ -1,0 +1,10 @@
+[
+  {"name": "cacheDir empty tool name", "src": [{"path": "a", "content": "a"}],
+   "calls": [{"fn": "cacheDir", "args": ["{{src}}", "", "1.2.3", "x64"]}]},
+  {"name": "cacheDir empty version", "src": [{"path": "a", "content": "a"}],
+   "calls": [{"fn": "cacheDir", "args": ["{{src}}", "tool", "", "x64"]}]},
+  {"name": "cacheFile empty tool name", "src": [{"path": "a", "content": "a"}],
+   "calls": [{"fn": "cacheFile", "args": ["{{src}}/a", "a", "", "1.2.3", "x64"]}]},
+  {"name": "cacheFile empty version", "src": [{"path": "a", "content": "a"}],
+   "calls": [{"fn": "cacheFile", "args": ["{{src}}/a", "a", "tool", "", "x64"]}]}
+]

@@ -46,7 +46,7 @@ func TestGetCachedToolOrDownload(t *testing.T) {
 	cache.SetTempDir(tempDir)
 	cache.SetCacheRoot(cacheDir)
 
-	f, err := cache.GetCachedToolOrDownload(cache.CacheOptions{Tool: "my-tool", Version: "1.0.1"}, &cache.DownloadToolOptions{}, s.URL)
+	f, err := cache.GetCachedToolOrDownload(cache.CacheOptions{Tool: "my-tool", Version: "1.0.1", Arch: "my-arch"}, &cache.DownloadToolOptions{}, s.URL)
 	assert.NoError(t, err)
 	assert.Regexp(t, regexp.MustCompilePOSIX(fmt.Sprintf(`^temp-%s[/\\][0-9a-f-]{36}`, testID)), f)
 	_, err = os.Stat(f)
@@ -57,9 +57,9 @@ func TestGetCachedToolOrDownload(t *testing.T) {
 
 	s.Close()
 
-	f, err = cache.GetCachedToolOrDownload(cache.CacheOptions{Tool: "my-tool", Version: "1.0.1"}, &cache.DownloadToolOptions{}, s.URL)
+	f, err = cache.GetCachedToolOrDownload(cache.CacheOptions{Tool: "my-tool", Version: "1.0.1", Arch: "my-arch"}, &cache.DownloadToolOptions{}, s.URL)
 	assert.NoError(t, err)
-	assert.Equal(t, filepath.Join("test-cache-"+testID, "my-tool", "1.0.1", "my-tool"), f)
+	assert.Equal(t, filepath.Join("test-cache-"+testID, "my-tool", "1.0.1", "my-arch", "my-tool"), f)
 	_, err = os.Stat(f)
 	assert.NoError(t, err)
 	bytes, err = ioutil.ReadFile(f)
