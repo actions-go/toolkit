@@ -71,14 +71,16 @@ Results: `core` 291 scenarios, `github` 70, `cache` 217. Each comparison found r
 |---|---|---|---|---|
 | `core` | @actions/core 3.0.1 | 291 | 9 | Linux, macOS, Windows |
 | `github` | @actions/github 9.1.1 | 70 | 7 | Linux, macOS, Windows |
-| `cache` | @actions/tool-cache 4.0.0 | 344 | 16 | Linux, macOS (not Windows) |
+| `cache` | @actions/tool-cache 4.0.0 | 363 | 16 | Linux, macOS, Windows (with the skips below) |
 
 Narrowed on purpose after the first macOS and Windows runs:
-- The whole `cache` suite is skipped on Windows: it compares POSIX file system behaviour (modes, symlink targets, `/` paths in error text).
+- On Windows the `cache` suite skips the scenarios that compare Unix permission bits or symbolic links (`requires: ["unix"]`, 8 scenarios: Windows has no mode bits, symlink creation needs privileges, and `io.cp` recreates links as junctions with absolute targets) and one that needs an OS version (`requires: ["osversion"]`: the reference reports none on Windows). Path separators are compared as `/` there.
 - tar and zip extraction scenarios (`requires: ["posix"]`) run on Linux only. The Go extractors reproduce GNU tar and Info-ZIP unzip; macOS ships bsdtar and another unzip build (other listings, differently normalised Unicode names). macOS still runs the manifest, version and cache scenarios.
-- `platform getDetails without PATH` is skipped on Windows (cause not analysed).
+- `extract7z` is supported by the reference on Windows only and `extractXar` on macOS only: Linux compares just the unsupported-OS errors, the xar scenarios run on macOS, and no 7z scenario runs anywhere (the reference needs its bundled 7zdec on Windows, which the port does not bundle).
 
-Not covered, by design: `extract7z`/`extractXar` (need external binaries), xz/zstd tar archives (no standard library decoder; Go returns an explicit "unsupported" error), `downloadTool` auth/headers (no Go API), and the Go-only helpers (`DownloadSelectedRepositoryFiles`, `MatchesOneOf`, `core/artifacts.go`).
+`platform getDetails without PATH` runs on all three systems now. The Windows difference was not about PATH: both sides fail with "Unable to locate executable file: powershell", but Go printed the Unix hint ("Also check the file mode...") where `@actions/io` prints the Windows one ("Also verify the file has a valid extension..."). Fixed in `core/platform.go` and `cache/extract.go`. The same Windows run also showed that `CacheFile`'s `..` hardening split targets on the OS separator only and did not work on Windows.
+
+Not covered, by design: xz/zstd tar archives (no standard library decoder; Go returns an explicit "unsupported" error), `downloadTool` auth/headers (no Go API), and the Go-only helpers (`DownloadSelectedRepositoryFiles`, `MatchesOneOf`, `core/artifacts.go`).
 
 Tar, zip and manifest hang trap: a reference call that never finishes (a tar waiting on stdin under bsdtar) hung the macOS job for the full 10 minute `go test` timeout with no scenario named. The cache driver now fails any reference call after 60 seconds, naming the scenario.
 
