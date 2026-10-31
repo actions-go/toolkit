@@ -66,7 +66,8 @@ jobs:
     - name: Compare Go and JavaScript behaviour
       env:
         PARITY_REQUIRED: "1"
-      run: go test -v ./parity/...
+      # not -v: 700+ passing scenarios would bury the diff of a failing one in the log
+      run: go test ./parity/...
 
   build:
     strategy:
