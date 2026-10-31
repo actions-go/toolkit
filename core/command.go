@@ -42,7 +42,8 @@ func Issue(kind string, message ...string) {
 func IssueCommand(kind string, properties map[string]string, message string) {
 	c := &command{kind, properties, message}
 	stdoutSetter.Lock()
-	fmt.Fprintln(stdout, c.String())
+	// @actions/core terminates commands with os.EOL
+	fmt.Fprint(stdout, c.String()+EOF)
 	stdoutSetter.Unlock()
 }
 
@@ -56,7 +57,7 @@ func issueFileCommandWithPerm(command string, message string, flag int, perm os.
 			return err
 		}
 		defer fd.Close()
-		fmt.Fprintln(fd, message)
+		fmt.Fprint(fd, message+EOF)
 		return nil
 	}
 	return fmt.Errorf("unable to find command file %s", command)

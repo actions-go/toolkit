@@ -13,18 +13,18 @@ func TestIssue(t *testing.T) {
 	b := bytes.NewBuffer(nil)
 	stdout = b
 	Issue("hello", "some\r\nmessage")
-	assert.Equal(t, "::hello::some%0D%0Amessage\n", b.String())
+	assert.Equal(t, "::hello::some%0D%0Amessage"+EOF, b.String())
 	b = bytes.NewBuffer(nil)
 	stdout = b
 	Issue("hello")
-	assert.Equal(t, "::hello::\n", b.String())
+	assert.Equal(t, "::hello::"+EOF, b.String())
 }
 
 func TestIssueWithoutCommandNameUsesTheReferencePlaceholder(t *testing.T) {
 	b := bytes.NewBuffer(nil)
 	stdout = b
 	Issue("", "msg")
-	assert.Equal(t, "::missing.command::msg\n", b.String())
+	assert.Equal(t, "::missing.command::msg"+EOF, b.String())
 }
 
 func TestIssueCommand(t *testing.T) {

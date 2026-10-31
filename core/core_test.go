@@ -36,7 +36,7 @@ func TestTestSummary(t *testing.T) {
 		AddStepSummary("and a new line")
 		content, err := os.ReadFile(name)
 		require.NoError(t, err)
-		assert.Equal(t, "this is the new content\nand a new line\n", string(content))
+		assert.Equal(t, "this is the new content"+EOF+"and a new line"+EOF, string(content))
 	})
 }
 
