@@ -5,6 +5,7 @@ package cache
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -59,8 +60,14 @@ func TestExtract7zRunsTheGivenToolInTheDestination(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, dest, got)
 	record, _ := os.ReadFile(filepath.Join(dir, "record"))
-	resolved, _ := filepath.EvalSymlinks(dest)
-	assert.Equal(t, resolved+"\nx\n-bb0\n-bd\n-sccUTF-8\na.7z\n", string(record))
+	// the first line is the working directory the shell printed; on macOS the
+	// temporary directory is a symlink (/var -> /private/var) and the shell
+	// prints either form, so compare the resolved paths
+	cwd, rest, _ := strings.Cut(string(record), "\n")
+	resolvedCwd, _ := filepath.EvalSymlinks(cwd)
+	resolvedDest, _ := filepath.EvalSymlinks(dest)
+	assert.Equal(t, resolvedDest, resolvedCwd)
+	assert.Equal(t, "x\n-bb0\n-bd\n-sccUTF-8\na.7z\n", rest)
 }
 
 func TestExtract7zReportsAFailureCode(t *testing.T) {
