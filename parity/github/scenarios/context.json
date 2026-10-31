@@ -1,0 +1,78 @@
+[
+  {"name": "context minimal environment", "kind": "context", "env": {"GITHUB_REPOSITORY": "octo/repo"}},
+  {"name": "context all variables", "kind": "context", "env": {
+    "GITHUB_EVENT_NAME": "push", "GITHUB_SHA": "ffac537e6cbbf934b08745a378932722df287a53",
+    "GITHUB_REF": "refs/heads/main", "GITHUB_WORKFLOW": "CI", "GITHUB_ACTION": "__run_2",
+    "GITHUB_ACTOR": "octocat", "GITHUB_JOB": "build", "GITHUB_RUN_ATTEMPT": "2",
+    "GITHUB_RUN_NUMBER": "17", "GITHUB_RUN_ID": "1658821493", "GITHUB_REPOSITORY": "octo/repo"}},
+  {"name": "context urls overridden", "kind": "context", "env": {
+    "GITHUB_REPOSITORY": "octo/repo", "GITHUB_API_URL": "https://ghe.example.com/api/v3", "GITHUB_SERVER_URL": "https://ghe.example.com",
+    "GITHUB_GRAPHQL_URL": "https://ghe.example.com/api/graphql"}},
+  {"name": "context urls set to empty", "kind": "context", "env": {
+    "GITHUB_REPOSITORY": "octo/repo", "GITHUB_API_URL": "", "GITHUB_SERVER_URL": "", "GITHUB_GRAPHQL_URL": ""}},
+  {"name": "context run numbers with trailing text", "kind": "context", "env": {
+    "GITHUB_REPOSITORY": "octo/repo", "GITHUB_RUN_ATTEMPT": "3x", "GITHUB_RUN_NUMBER": "12abc", "GITHUB_RUN_ID": "7 8"}},
+  {"name": "context run numbers with surrounding whitespace", "kind": "context", "env": {
+    "GITHUB_REPOSITORY": "octo/repo", "GITHUB_RUN_ATTEMPT": " 4 ", "GITHUB_RUN_NUMBER": "\t5", "GITHUB_RUN_ID": "+6"}},
+  {"name": "context run numbers not numeric", "kind": "context", "env": {
+    "GITHUB_REPOSITORY": "octo/repo", "GITHUB_RUN_ATTEMPT": "abc", "GITHUB_RUN_NUMBER": "", "GITHUB_RUN_ID": "0x10"}},
+  {"name": "context run numbers negative or decimal", "kind": "context", "env": {
+    "GITHUB_REPOSITORY": "octo/repo", "GITHUB_RUN_ATTEMPT": "-1", "GITHUB_RUN_NUMBER": "1.9", "GITHUB_RUN_ID": "1e3"}},
+
+  {"name": "repo from GITHUB_REPOSITORY", "kind": "context", "env": {"GITHUB_REPOSITORY": "octo/repo"}},
+  {"name": "repo without slash", "kind": "context", "env": {"GITHUB_REPOSITORY": "octo"}},
+  {"name": "repo with extra segments", "kind": "context", "env": {"GITHUB_REPOSITORY": "octo/repo/extra"}},
+  {"name": "repo with trailing slash", "kind": "context", "env": {"GITHUB_REPOSITORY": "octo/"}},
+  {"name": "repo from payload when GITHUB_REPOSITORY is unset", "kind": "context", "eventFixture": "issues_event.json"},
+  {"name": "repo from payload when GITHUB_REPOSITORY is empty", "kind": "context", "eventFixture": "issues_event.json",
+    "env": {"GITHUB_REPOSITORY": ""}},
+  {"name": "GITHUB_REPOSITORY wins over the payload repository", "kind": "context", "eventFixture": "issues_event.json",
+    "env": {"GITHUB_REPOSITORY": "octo/repo"}},
+  {"name": "repo unknown", "kind": "context"},
+  {"name": "repo unknown with payload lacking a repository", "kind": "context", "event": {"action": "opened"}},
+
+  {"name": "issue from issue event", "kind": "context", "eventFixture": "issues_event.json",
+    "payloadPaths": ["issue.number", "action", "repository.name", "repository.owner.login", "repository.full_name", "sender.login"]},
+  {"name": "issue from pull request event", "kind": "context",
+    "event": {"action": "opened", "number": 9, "pull_request": {"number": 9}, "repository": {"name": "r", "owner": {"login": "o"}}},
+    "payloadPaths": ["number", "pull_request.number", "action"]},
+  {"name": "issue number only at the top of the payload", "kind": "context",
+    "event": {"number": 7, "repository": {"name": "r", "owner": {"login": "o"}}}, "payloadPaths": ["number"]},
+  {"name": "issue wins over pull request", "kind": "context",
+    "event": {"issue": {"number": 1}, "pull_request": {"number": 2}, "number": 3, "repository": {"name": "r", "owner": {"login": "o"}}}},
+  {"name": "pull request wins over top level number", "kind": "context",
+    "event": {"pull_request": {"number": 2}, "number": 3, "repository": {"name": "r", "owner": {"login": "o"}}}},
+  {"name": "issue without number does not fall back to pull request", "kind": "context",
+    "event": {"issue": {}, "pull_request": {"number": 3}, "repository": {"name": "r", "owner": {"login": "o"}}}},
+  {"name": "pull request without number does not fall back to top level number", "kind": "context",
+    "event": {"pull_request": {}, "number": 3, "repository": {"name": "r", "owner": {"login": "o"}}}},
+  {"name": "issue without any number", "kind": "context", "env": {"GITHUB_REPOSITORY": "octo/repo"}, "event": {"action": "x"}},
+  {"name": "issue owner and repo come from GITHUB_REPOSITORY", "kind": "context", "env": {"GITHUB_REPOSITORY": "octo/repo"},
+    "eventFixture": "issues_event.json"},
+  {"name": "issue unknown repository", "kind": "context", "event": {"issue": {"number": 4}}},
+
+  {"name": "push event payload", "kind": "context", "eventFixture": "push_event.json",
+    "env": {"GITHUB_EVENT_NAME": "push", "GITHUB_REF": "refs/heads/master"},
+    "payloadPaths": ["ref", "before", "after", "created", "deleted", "forced", "compare", "head_commit.id", "head_commit.message",
+      "pusher.name", "repository.full_name", "repository.default_branch", "repository.owner.login", "sender.login", "sender.id", "action", "number"]},
+  {"name": "issues event payload", "kind": "context", "eventFixture": "issues_event.json",
+    "payloadPaths": ["action", "issue.number", "issue.title", "issue.state", "issue.user.login", "issue.html_url", "repository.id",
+      "repository.private", "repository.fork", "sender.login", "sender.type", "label"]},
+  {"name": "label event payload", "kind": "context", "eventFixture": "label_event.json",
+    "payloadPaths": ["action", "label.name", "label.color", "label.default", "label.id", "repository.name", "sender.login", "issue"]},
+  {"name": "milestone event payload", "kind": "context", "eventFixture": "milestone_event.json",
+    "payloadPaths": ["action", "milestone.title", "milestone.number", "milestone.state", "milestone.open_issues", "repository.name", "sender.login"]},
+  {"name": "payload paths absent from the event", "kind": "context", "eventFixture": "push_event.json",
+    "payloadPaths": ["nothing", "repository.nothing", "installation", "installation.id", "pull_request.number"]},
+  {"name": "installation in payload", "kind": "context",
+    "event": {"action": "created", "installation": {"id": 99}, "repository": {"name": "r", "owner": {"login": "o"}}},
+    "payloadPaths": ["installation.id", "repository.name"]},
+
+  {"name": "event path unset", "kind": "context", "env": {"GITHUB_REPOSITORY": "octo/repo"}, "payloadPaths": ["action"]},
+  {"name": "event path empty", "kind": "context", "env": {"GITHUB_EVENT_PATH": "", "GITHUB_REPOSITORY": "octo/repo"}, "payloadPaths": ["action"]},
+  {"name": "event path to a missing file", "kind": "context",
+    "env": {"GITHUB_EVENT_PATH": "/nonexistent/parity/event.json", "GITHUB_REPOSITORY": "octo/repo"}, "payloadPaths": ["action"]},
+  {"name": "event file is invalid json", "kind": "context", "eventRaw": "{not json", "env": {"GITHUB_REPOSITORY": "octo/repo"}},
+  {"name": "event file is empty", "kind": "context", "eventRaw": "", "env": {"GITHUB_REPOSITORY": "octo/repo"}},
+  {"name": "event file is an empty object", "kind": "context", "eventRaw": "{}", "env": {"GITHUB_REPOSITORY": "octo/repo"}, "payloadPaths": ["action"]}
+]
