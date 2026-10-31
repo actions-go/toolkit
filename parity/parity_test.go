@@ -349,8 +349,8 @@ func runJS(t *testing.T, scenariosFile string) map[string]result {
 }
 
 // normalisation of values that legitimately differ between runs/implementations:
-// the file command delimiter is random in the reference, and the local server
-// listens on a different port each time.
+// the file command delimiter is random (in both implementations), and the local
+// server listens on a different port each time.
 var (
 	jsDelimiter = regexp.MustCompile(`ghadelimiter_[0-9a-f-]{36}`)
 	serverAddr  = regexp.MustCompile(`http://127\.0\.0\.1:\d+`)
@@ -359,7 +359,6 @@ var (
 func (r result) normalise() result {
 	n := func(s string) string {
 		s = jsDelimiter.ReplaceAllString(s, "<DELIM>")
-		s = strings.ReplaceAll(s, "_GitHubActionsGoFileCommandDelimeter_", "<DELIM>")
 		return serverAddr.ReplaceAllString(s, "<SERVER>")
 	}
 	r.Stdout = n(r.Stdout)

@@ -7,10 +7,12 @@ import (
 	"os"
 	"strings"
 	"sync"
+
+	"github.com/google/uuid"
 )
 
 const (
-	delimiter = "_GitHubActionsGoFileCommandDelimeter_"
+	delimiterPrefix = "ghadelimiter_"
 
 	// StatusFailed is returned by Status() in case this action has been marked as failed
 	StatusFailed = 1
@@ -112,7 +114,12 @@ func annotationToProperties(p AnnotationProperties) map[string]string {
 	return props
 }
 
+// formatOutput renders name and value as a multi-line file command entry. The
+// delimiter is random for every entry, like @actions/core: a fixed one could be
+// guessed by whoever controls the value, who could then end the entry early and
+// forge further outputs or environment variables.
 func formatOutput(name, value string) string {
+	delimiter := delimiterPrefix + uuid.NewString()
 	return strings.Join(
 		[]string{
 			fmt.Sprintf("%s<<%s", name, delimiter),
