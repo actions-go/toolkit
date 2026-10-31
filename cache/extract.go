@@ -48,6 +48,11 @@ func applyDirectories(dirs []deferredDir) {
 
 // which finds an executable in PATH like io.which(tool, true) of @actions/io
 // does.
+//
+// Only the error text matches the reference. The lookup itself is Go's
+// exec.LookPath, which differs from @actions/io's findInPath on execute bits,
+// PATHEXT, names containing a separator, empty PATH entries and letter case.
+// This is an accepted gap, see "Accepted gap" in docs/goals/js-parity.md.
 func which(tool string) (string, error) {
 	path, err := exec.LookPath(tool)
 	if err != nil {
