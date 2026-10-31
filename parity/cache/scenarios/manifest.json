@@ -1,0 +1,152 @@
+[
+  {"name": "getManifestFromRepo reads the manifest and sends the headers",
+   "calls": [{"fn": "getManifestFromRepo", "args": ["actions", "ok", "token secret", "main"]}]},
+  {"name": "getManifestFromRepo without auth and with the default branch",
+   "calls": [{"fn": "getManifestFromRepo", "args": ["actions", "ok"]}]},
+  {"name": "getManifestFromRepo null auth",
+   "calls": [{"fn": "getManifestFromRepo", "args": ["actions", "ok", null]}]},
+  {"name": "getManifestFromRepo empty auth",
+   "calls": [{"fn": "getManifestFromRepo", "args": ["actions", "ok", "", "dev"]}]},
+  {"name": "getManifestFromRepo manifest with a byte order mark",
+   "calls": [{"fn": "getManifestFromRepo", "args": ["actions", "bom", "Bearer abc"]}]},
+  {"name": "getManifestFromRepo the first manifest of the tree is used",
+   "calls": [{"fn": "getManifestFromRepo", "args": ["actions", "duplicate"]}]},
+  {"name": "getManifestFromRepo manifest is not json",
+   "calls": [{"fn": "getManifestFromRepo", "args": ["actions", "badjson"]}]},
+  {"name": "getManifestFromRepo manifest is empty",
+   "calls": [{"fn": "getManifestFromRepo", "args": ["actions", "empty"]}]},
+  {"name": "getManifestFromRepo manifest is null",
+   "calls": [{"fn": "getManifestFromRepo", "args": ["actions", "null"]}]},
+  {"name": "getManifestFromRepo manifest is not an array",
+   "calls": [{"fn": "getManifestFromRepo", "args": ["actions", "object"]}]},
+  {"name": "getManifestFromRepo manifest answers 404",
+   "calls": [{"fn": "getManifestFromRepo", "args": ["actions", "blob404"]}]},
+  {"name": "getManifestFromRepo manifest behind a redirect",
+   "calls": [{"fn": "getManifestFromRepo", "args": ["actions", "blobredirect", "token secret"]}]},
+  {"name": "getManifestFromRepo no manifest in the tree",
+   "calls": [{"fn": "getManifestFromRepo", "args": ["actions", "nomanifest"]}]},
+  {"name": "getManifestFromRepo empty tree",
+   "calls": [{"fn": "getManifestFromRepo", "args": ["actions", "emptytree"]}]},
+  {"name": "getManifestFromRepo answer without a tree",
+   "calls": [{"fn": "getManifestFromRepo", "args": ["actions", "notree"]}]},
+  {"name": "getManifestFromRepo tree is not json",
+   "calls": [{"fn": "getManifestFromRepo", "args": ["actions", "notjson"]}]},
+  {"name": "getManifestFromRepo tree is empty",
+   "calls": [{"fn": "getManifestFromRepo", "args": ["actions", "emptybody"]}]},
+  {"name": "getManifestFromRepo tree is null",
+   "calls": [{"fn": "getManifestFromRepo", "args": ["actions", "jsonnull"]}]},
+  {"name": "getManifestFromRepo repository not found",
+   "calls": [{"fn": "getManifestFromRepo", "args": ["actions", "notfound"]}]},
+  {"name": "getManifestFromRepo unauthorized",
+   "calls": [{"fn": "getManifestFromRepo", "args": ["actions", "unauthorized", "token wrong"]}]},
+  {"name": "getManifestFromRepo forbidden",
+   "calls": [{"fn": "getManifestFromRepo", "args": ["actions", "forbidden"]}]},
+  {"name": "getManifestFromRepo server error without a body",
+   "calls": [{"fn": "getManifestFromRepo", "args": ["actions", "servererror"]}]},
+  {"name": "getManifestFromRepo server error with a text body",
+   "calls": [{"fn": "getManifestFromRepo", "args": ["actions", "texterror"]}]},
+  {"name": "getManifestFromRepo two calls",
+   "calls": [{"fn": "getManifestFromRepo", "args": ["actions", "ok", "token a"]}, {"fn": "getManifestFromRepo", "args": ["actions", "notfound"]}]},
+
+  {"name": "findFromManifest first stable release for an architecture",
+   "calls": [{"fn": "findFromManifest", "args": ["*", true, [
+     {"version": "3.0.0-beta.1", "stable": false, "release_url": "https://example.invalid/r3b", "files": [
+       {"filename": "t3b-linux", "platform": "linux", "arch": "x64", "download_url": "https://example.invalid/t3b-linux"},
+       {"filename": "t3b-darwin", "platform": "darwin", "arch": "x64", "download_url": "https://example.invalid/t3b-darwin"},
+       {"filename": "t3b-win", "platform": "win32", "arch": "x64", "download_url": "https://example.invalid/t3b-win"}]},
+     {"version": "2.1.0", "stable": true, "release_url": "https://example.invalid/r2", "files": [
+       {"filename": "t2-linux-arm", "platform": "linux", "arch": "arm64", "download_url": "https://example.invalid/t2-linux-arm"},
+       {"filename": "t2-linux", "platform": "linux", "arch": "x64", "download_url": "https://example.invalid/t2-linux"},
+       {"filename": "t2-darwin", "platform": "darwin", "arch": "x64", "download_url": "https://example.invalid/t2-darwin"},
+       {"filename": "t2-win", "platform": "win32", "arch": "x64", "download_url": "https://example.invalid/t2-win"}]}], "x64"]}]},
+  {"name": "findFromManifest unstable releases are accepted",
+   "calls": [{"fn": "findFromManifest", "args": ["*", false, [
+     {"version": "3.0.0-beta.1", "stable": false, "release_url": "https://example.invalid/r3b", "files": [
+       {"filename": "t3b-linux", "platform": "linux", "arch": "x64", "download_url": "https://example.invalid/t3b-linux"},
+       {"filename": "t3b-darwin", "platform": "darwin", "arch": "x64", "download_url": "https://example.invalid/t3b-darwin"},
+       {"filename": "t3b-win", "platform": "win32", "arch": "x64", "download_url": "https://example.invalid/t3b-win"}]}], "x64"]}]},
+  {"name": "findFromManifest a version range",
+   "calls": [{"fn": "findFromManifest", "args": ["^1.2.0", true, [
+     {"version": "2.0.0", "stable": true, "release_url": "u2", "files": [
+       {"filename": "a", "platform": "linux", "arch": "x64", "download_url": "d"}, {"filename": "a", "platform": "darwin", "arch": "x64", "download_url": "d"}, {"filename": "a", "platform": "win32", "arch": "x64", "download_url": "d"}]},
+     {"version": "1.9.1", "stable": true, "release_url": "u19", "files": [
+       {"filename": "b", "platform": "linux", "arch": "x64", "download_url": "d"}, {"filename": "b", "platform": "darwin", "arch": "x64", "download_url": "d"}, {"filename": "b", "platform": "win32", "arch": "x64", "download_url": "d"}]},
+     {"version": "1.2.0", "stable": true, "release_url": "u12", "files": [
+       {"filename": "c", "platform": "linux", "arch": "x64", "download_url": "d"}, {"filename": "c", "platform": "darwin", "arch": "x64", "download_url": "d"}, {"filename": "c", "platform": "win32", "arch": "x64", "download_url": "d"}]}], "x64"]}]},
+  {"name": "findFromManifest the manifest order wins over the version order",
+   "calls": [{"fn": "findFromManifest", "args": ["1.x", true, [
+     {"version": "1.1.0", "stable": true, "release_url": "u11", "files": [
+       {"filename": "a", "platform": "linux", "arch": "x64", "download_url": "d"}, {"filename": "a", "platform": "darwin", "arch": "x64", "download_url": "d"}, {"filename": "a", "platform": "win32", "arch": "x64", "download_url": "d"}]},
+     {"version": "1.9.0", "stable": true, "release_url": "u19", "files": [
+       {"filename": "b", "platform": "linux", "arch": "x64", "download_url": "d"}, {"filename": "b", "platform": "darwin", "arch": "x64", "download_url": "d"}, {"filename": "b", "platform": "win32", "arch": "x64", "download_url": "d"}]}], "x64"]}]},
+  {"name": "findFromManifest no release satisfies the spec",
+   "calls": [{"fn": "findFromManifest", "args": ["9.x", true, [
+     {"version": "1.0.0", "stable": true, "release_url": "u1", "files": [{"filename": "a", "platform": "linux", "arch": "x64", "download_url": "d"}]}], "x64"]}]},
+  {"name": "findFromManifest no file for the architecture",
+   "calls": [{"fn": "findFromManifest", "args": ["*", true, [
+     {"version": "1.0.0", "stable": true, "release_url": "u1", "files": [
+       {"filename": "a", "platform": "linux", "arch": "mips", "download_url": "d"}, {"filename": "a", "platform": "darwin", "arch": "mips", "download_url": "d"}, {"filename": "a", "platform": "win32", "arch": "mips", "download_url": "d"}]}], "x64"]}]},
+  {"name": "findFromManifest falls back to an older release that has the file",
+   "calls": [{"fn": "findFromManifest", "args": ["*", true, [
+     {"version": "2.0.0", "stable": true, "release_url": "u2", "files": [{"filename": "a", "platform": "plan9", "arch": "x64", "download_url": "d"}]},
+     {"version": "1.0.0", "stable": true, "release_url": "u1", "files": [
+       {"filename": "b", "platform": "linux", "arch": "x64", "download_url": "d"}, {"filename": "b", "platform": "darwin", "arch": "x64", "download_url": "d"}, {"filename": "b", "platform": "win32", "arch": "x64", "download_url": "d"}]}], "x64"]}]},
+  {"name": "findFromManifest the default architecture is the one of the machine",
+   "calls": [{"fn": "findFromManifest", "args": ["*", true, [
+     {"version": "1.0.0", "stable": true, "release_url": "u1", "files": [
+       {"filename": "x64-linux", "platform": "linux", "arch": "x64", "download_url": "d"}, {"filename": "x64-darwin", "platform": "darwin", "arch": "x64", "download_url": "d"}, {"filename": "x64-win", "platform": "win32", "arch": "x64", "download_url": "d"},
+       {"filename": "arm64-linux", "platform": "linux", "arch": "arm64", "download_url": "d"}, {"filename": "arm64-darwin", "platform": "darwin", "arch": "arm64", "download_url": "d"}, {"filename": "arm64-win", "platform": "win32", "arch": "arm64", "download_url": "d"}]}]]}]},
+  {"name": "findFromManifest v-prefixed versions and spec",
+   "calls": [{"fn": "findFromManifest", "args": ["v1.2.3", true, [
+     {"version": "v1.2.3", "stable": true, "release_url": "u1", "files": [
+       {"filename": "a", "platform": "linux", "arch": "x64", "download_url": "d"}, {"filename": "a", "platform": "darwin", "arch": "x64", "download_url": "d"}, {"filename": "a", "platform": "win32", "arch": "x64", "download_url": "d"}]}], "x64"]}]},
+  {"name": "findFromManifest a version that is not a version",
+   "calls": [{"fn": "findFromManifest", "args": ["*", true, [
+     {"version": "latest", "stable": true, "release_url": "u1", "files": [{"filename": "a", "platform": "linux", "arch": "x64", "download_url": "d"}]}], "x64"]}]},
+  {"name": "findFromManifest empty manifest",
+   "calls": [{"fn": "findFromManifest", "args": ["*", true, [], "x64"]}]},
+  {"name": "findFromManifest platform version equal to the one of the machine",
+   "calls": [{"fn": "findFromManifest", "args": ["*", true, [
+     {"version": "1.0.0", "stable": true, "release_url": "u1", "files": [
+       {"filename": "a", "platform": "linux", "platform_version": "{{osversion}}", "arch": "x64", "download_url": "d"}, {"filename": "a", "platform": "darwin", "platform_version": "{{osversion}}", "arch": "x64", "download_url": "d"}, {"filename": "a", "platform": "win32", "platform_version": "{{osversion}}", "arch": "x64", "download_url": "d"}]}], "x64"]}]},
+  {"name": "findFromManifest platform version of another machine",
+   "calls": [{"fn": "findFromManifest", "args": ["*", true, [
+     {"version": "2.0.0", "stable": true, "release_url": "u2", "files": [
+       {"filename": "a", "platform": "linux", "platform_version": "0.0.1", "arch": "x64", "download_url": "d"}, {"filename": "a", "platform": "darwin", "platform_version": "0.0.1", "arch": "x64", "download_url": "d"}, {"filename": "a", "platform": "win32", "platform_version": "0.0.1", "arch": "x64", "download_url": "d"}]},
+     {"version": "1.0.0", "stable": true, "release_url": "u1", "files": [
+       {"filename": "b", "platform": "linux", "arch": "x64", "download_url": "d"}, {"filename": "b", "platform": "darwin", "arch": "x64", "download_url": "d"}, {"filename": "b", "platform": "win32", "arch": "x64", "download_url": "d"}]}], "x64"]}]},
+  {"name": "findFromManifest platform version as a range",
+   "calls": [{"fn": "findFromManifest", "args": ["*", true, [
+     {"version": "2.0.0", "stable": true, "release_url": "u2", "files": [
+       {"filename": "a", "platform": "linux", "platform_version": ">=0.0.1", "arch": "x64", "download_url": "d"}, {"filename": "a", "platform": "darwin", "platform_version": ">=0.0.1", "arch": "x64", "download_url": "d"}, {"filename": "a", "platform": "win32", "platform_version": ">=0.0.1", "arch": "x64", "download_url": "d"}]}], "x64"]}]},
+  {"name": "findFromManifest debug logging",
+   "env": {"RUNNER_DEBUG": "1"},
+   "calls": [{"fn": "findFromManifest", "args": ["1.x", true, [
+     {"version": "2.0.0", "stable": true, "release_url": "u2", "files": [{"filename": "a", "platform": "linux", "arch": "x64", "download_url": "d"}]},
+     {"version": "1.0.0", "stable": false, "release_url": "u1", "files": [{"filename": "b", "platform": "linux", "arch": "x64", "download_url": "d"}]},
+     {"version": "1.5.0", "stable": true, "release_url": "u15", "files": [
+       {"filename": "c", "platform": "freebsd", "arch": "x64", "download_url": "d"}, {"filename": "c", "platform": "linux", "arch": "x64", "download_url": "d"}, {"filename": "c", "platform": "darwin", "arch": "x64", "download_url": "d"}, {"filename": "c", "platform": "win32", "arch": "x64", "download_url": "d"}]}], "x64"]}]},
+
+  {"name": "_getOsVersion",
+   "calls": [{"fn": "_getOsVersion", "args": []}]},
+
+  {"name": "isExplicitVersion versions",
+   "calls": [{"fn": "isExplicitVersion", "args": ["1.2.3"]}, {"fn": "isExplicitVersion", "args": ["v1.2.3"]}, {"fn": "isExplicitVersion", "args": ["=1.2.3"]}, {"fn": "isExplicitVersion", "args": ["1.2.3-beta.1"]}, {"fn": "isExplicitVersion", "args": ["1.2.3+build.5"]}, {"fn": "isExplicitVersion", "args": ["  1.2.3  "]}]},
+  {"name": "isExplicitVersion ranges and junk",
+   "calls": [{"fn": "isExplicitVersion", "args": ["1.2"]}, {"fn": "isExplicitVersion", "args": ["1.x"]}, {"fn": "isExplicitVersion", "args": ["^1.2.3"]}, {"fn": "isExplicitVersion", "args": ["*"]}, {"fn": "isExplicitVersion", "args": [">=1.0.0"]}, {"fn": "isExplicitVersion", "args": ["latest"]}, {"fn": "isExplicitVersion", "args": [""]}, {"fn": "isExplicitVersion", "args": ["01.2.3"]}, {"fn": "isExplicitVersion", "args": ["1.2.3.4"]}]},
+  {"name": "isExplicitVersion debug logging",
+   "env": {"RUNNER_DEBUG": "1"},
+   "calls": [{"fn": "isExplicitVersion", "args": ["v1.2.3"]}, {"fn": "isExplicitVersion", "args": ["1.x"]}]},
+
+  {"name": "evaluateVersions highest satisfying version",
+   "calls": [{"fn": "evaluateVersions", "args": [["1.0.0", "1.2.3", "1.10.0", "2.0.0", "1.9.9"], "1.x"]}, {"fn": "evaluateVersions", "args": [["1.0.0", "1.2.3", "1.10.0", "2.0.0"], "^1.2.0"]}, {"fn": "evaluateVersions", "args": [["1.0.0", "2.0.0"], "*"]}]},
+  {"name": "evaluateVersions nothing satisfies",
+   "calls": [{"fn": "evaluateVersions", "args": [["1.0.0", "2.0.0"], "3.x"]}, {"fn": "evaluateVersions", "args": [[], "*"]}]},
+  {"name": "evaluateVersions prereleases",
+   "calls": [{"fn": "evaluateVersions", "args": [["1.0.0-beta.1", "1.0.0-beta.2", "0.9.0"], "*"]}, {"fn": "evaluateVersions", "args": [["1.0.0-beta.1", "1.0.0-beta.2", "0.9.0"], ">=1.0.0-beta.1"]}]},
+  {"name": "evaluateVersions invalid versions are skipped",
+   "calls": [{"fn": "evaluateVersions", "args": [["1.0.0", "2.0.0", "latest"], "*"]}]},
+  {"name": "evaluateVersions debug logging",
+   "env": {"RUNNER_DEBUG": "1"},
+   "calls": [{"fn": "evaluateVersions", "args": [["1.0.0", "1.5.0", "2.0.0"], "1.x"]}, {"fn": "evaluateVersions", "args": [["1.0.0"], "9.x"]}]}
+]

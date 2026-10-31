@@ -115,6 +115,7 @@ func newServer() *httptest.Server {
 			w.WriteHeader(code)
 		})
 	}
+	addManifestRoutes(mux)
 	return httptest.NewServer(mux)
 }
 
@@ -244,12 +245,53 @@ func snapshot(t *testing.T, root string) map[string]node {
 
 type dirs struct{ root, src, cache, temp, server string }
 
+// subst replaces the placeholders in strings, also in arrays and objects.
 func (d dirs) subst(v interface{}) interface{} {
-	s, ok := v.(string)
-	if !ok {
-		return v
+	switch x := v.(type) {
+	case string:
+		x = strings.NewReplacer("{{src}}", d.src, "{{cache}}", d.cache, "{{temp}}", d.temp, "{{server}}", d.server).Replace(x)
+		if strings.Contains(x, "{{osversion}}") {
+			x = strings.ReplaceAll(x, "{{osversion}}", cache.OSVersion())
+		}
+		return x
+	case []interface{}:
+		out := make([]interface{}, len(x))
+		for i, e := range x {
+			out[i] = d.subst(e)
+		}
+		return out
+	case map[string]interface{}:
+		out := make(map[string]interface{}, len(x))
+		for k, e := range x {
+			out[k] = d.subst(e)
+		}
+		return out
 	}
-	return strings.NewReplacer("{{src}}", d.src, "{{cache}}", d.cache, "{{temp}}", d.temp, "{{server}}", d.server).Replace(s)
+	return v
+}
+
+// generic turns a value into what the JSON of the reference decodes to, so that
+// both sides are compared as data and not by the field order of a struct.
+func generic(t *testing.T, v interface{}) interface{} {
+	t.Helper()
+	data, err := json.Marshal(v)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var out interface{}
+	if err := json.Unmarshal(data, &out); err != nil {
+		t.Fatal(err)
+	}
+	return out
+}
+
+// decode converts a scenario argument into a Go value through JSON.
+func decode(t *testing.T, arg interface{}, into interface{}) {
+	t.Helper()
+	data, _ := json.Marshal(arg)
+	if err := json.Unmarshal(data, into); err != nil {
+		t.Fatalf("argument %s: %v", data, err)
+	}
 }
 
 // invoke maps a JS function name to the equivalent Go call. Optional JS
@@ -302,6 +344,26 @@ func invoke(t *testing.T, d dirs, c call) ret {
 		return result1(cache.ExtractTar(a(0), a(1), flags...))
 	case "extractZip":
 		return result1(cache.ExtractZip(a(0), a(1)))
+	case "getManifestFromRepo":
+		releases, err := cache.GetManifestFromRepo(a(0), a(1), a(2), a(3))
+		if err != nil {
+			return ret{Error: err.Error()}
+		}
+		return ret{Value: generic(t, releases)}
+	case "findFromManifest":
+		var manifest []cache.ToolRelease
+		decode(t, d.subst(c.Args[2]), &manifest)
+		stable, _ := c.Args[1].(bool)
+		// JS answers undefined, which the driver reports as null, when nothing matches
+		return ret{Value: generic(t, cache.FindFromManifest(a(0), stable, manifest, a(3)))}
+	case "isExplicitVersion":
+		return ret{Value: cache.IsExplicitVersion(a(0))}
+	case "evaluateVersions":
+		var versions []string
+		decode(t, d.subst(c.Args[0]), &versions)
+		return ret{Value: cache.EvaluateVersions(versions, a(1))}
+	case "_getOsVersion":
+		return ret{Value: cache.OSVersion()}
 	default:
 		t.Fatalf("no Go adapter for %q", c.Fn)
 	}
@@ -332,6 +394,11 @@ func runGo(t *testing.T, sc scenario, server string) result {
 	materialise(t, d.src, sc.Src)
 	materialise(t, d.cache, sc.Cache)
 	materialise(t, d.temp, sc.Temp)
+	// getManifestFromRepo reads the GitHub API, the driver does the same with
+	// the requests to api.github.com
+	apiURL := cache.ManifestAPIURL
+	cache.ManifestAPIURL = server
+	t.Cleanup(func() { cache.ManifestAPIURL = apiURL })
 	t.Setenv("RUNNER_TOOL_CACHE", d.cache)
 	t.Setenv("RUNNER_TEMP", d.temp)
 	for k, v := range sc.Env {
