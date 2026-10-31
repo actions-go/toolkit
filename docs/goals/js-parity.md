@@ -82,6 +82,15 @@ Not covered, by design: `extract7z`/`extractXar` (need external binaries), xz/zs
 
 Tar, zip and manifest hang trap: a reference call that never finishes (a tar waiting on stdin under bsdtar) hung the macOS job for the full 10 minute `go test` timeout with no scenario named. The cache driver now fails any reference call after 60 seconds, naming the scenario.
 
+## Extract7z and ExtractXar (third round)
+
+- The reference limits both: `extract7z` asserts `IS_WINDOWS` and `extractXar` asserts `IS_MAC`, before it looks at its arguments. Linux can only compare the unsupported-OS errors and "no destination folder is created"; the xar scenarios (`requires: ["darwin", "xar"]`) run on macOS only, and no 7z scenario runs anywhere until the cache suite runs on Windows.
+- `Extract7z` without a path looks for `7z`/`7zr` in PATH; the reference runs a bundled PowerShell script (`Invoke-7zdec.ps1`) and the port bundles nothing.
+- Scenarios that could not run in the sandbox (no macOS, no `xar`) were only proven by CI. Expect the first run of any such scenario to find something; this one found two things:
+  - the node driver runs every scenario in one process, so a scenario that sets `PATH` (the "no xar in PATH" ones) broke the later `_getOsVersion` scenario ("sw_vers: No such file"); the driver now restores its starting environment before each scenario;
+  - `@actions/exec` writes a failing tool's stderr into the same log stream as stdout, so the Go port now sends the child's stderr to stdout too.
+- A mistake worth remembering: `scripts/verify | tail -3 && git commit` committed a failing tree, because the pipeline's exit status is `tail`'s. The driver change used a `const` declared after the loop that calls it (temporal dead zone). Redirect the output to a file and test the exit status, then read the file.
+
 ## Running locally
 
 ```bash
