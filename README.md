@@ -11,7 +11,7 @@ The last upstream commit that was backported is recorded in [`.actions-toolkit-s
 go get github.com/actions-go/toolkit
 ```
 
-CI runs the tests on Linux, macOS and Windows with the latest four Go releases (see [ci.yml](.github/workflows/ci.yml)). `go.mod` declares `go 1.19`.
+CI runs the tests on Linux, macOS and Windows with the last four Go releases (currently 1.23, 1.24, 1.25 and 1.26; see [ci.yml](.github/workflows/ci.yml)). `go.mod` declares the oldest of them (`go 1.23.0`), and CI sets `GOTOOLCHAIN=local` so each matrix leg really runs that release. Dependencies are therefore kept at the newest versions that still build on that oldest release.
 
 To start a new action, use the [go-action-template](https://github.com/tjamet/go-action-template).
 

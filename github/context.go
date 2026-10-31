@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"github.com/actions-go/toolkit/core"
-	"github.com/google/go-github/v42/github"
+	"github.com/google/go-github/v74/github"
 )
 
 // Context contains details on the workflow execution
