@@ -17,7 +17,8 @@ import (
 // time and hands both implementations the same file, so that no binary is
 // committed.
 type archiveSpec struct {
-	// Format is tar, tgz, tbz2 (needs the bzip2 binary to compress) or zip.
+	// Format is tar, tgz, tbz2 (needs the bzip2 binary to compress), zip or
+	// xar (needs the xar binary).
 	Format string        `json:"format"`
 	Files  []archiveFile `json:"files"`
 	// Truncate drops that many bytes from the end of the archive.
@@ -58,6 +59,8 @@ func (a archiveSpec) build() ([]byte, error) {
 		data, err = a.buildTar()
 	case "zip":
 		data, err = a.buildZip()
+	case "xar":
+		data, err = a.buildXar()
 	default:
 		return nil, fmt.Errorf("unknown archive format %q", a.Format)
 	}

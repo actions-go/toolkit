@@ -327,18 +327,11 @@ func invoke(t *testing.T, d dirs, c call) ret {
 		}
 		return result1(cache.DownloadTool(a(0), opts))
 	case "extractTar":
-		var flags []string
-		if len(c.Args) > 2 {
-			switch f := c.Args[2].(type) {
-			case string:
-				flags = []string{d.subst(f).(string)}
-			case []interface{}:
-				for _, v := range f {
-					flags = append(flags, fmt.Sprint(d.subst(v)))
-				}
-			}
-		}
-		return result1(cache.ExtractTar(a(0), a(1), flags...))
+		return result1(cache.ExtractTar(a(0), a(1), flagArgs(d, c)...))
+	case "extractXar":
+		return result1(cache.ExtractXar(a(0), a(1), flagArgs(d, c)...))
+	case "extract7z":
+		return result1(cache.Extract7z(a(0), a(1), a(2)))
 	case "extractZip":
 		return result1(cache.ExtractZip(a(0), a(1)))
 	case "getManifestFromRepo":
@@ -365,6 +358,23 @@ func invoke(t *testing.T, d dirs, c call) ret {
 		t.Fatalf("no Go adapter for %q", c.Fn)
 	}
 	return ret{}
+}
+
+// flagArgs is the third argument of extractTar and extractXar: one flag or a
+// list of them.
+func flagArgs(d dirs, c call) []string {
+	var flags []string
+	if len(c.Args) > 2 {
+		switch f := c.Args[2].(type) {
+		case string:
+			flags = []string{d.subst(f).(string)}
+		case []interface{}:
+			for _, v := range f {
+				flags = append(flags, fmt.Sprint(d.subst(v)))
+			}
+		}
+	}
+	return flags
 }
 
 // result1 reports a thrown error like the JS driver: an error and no value.
@@ -620,6 +630,14 @@ func unmet(sc scenario) (reason string, fatal bool) {
 			// back Unicode-normalised differently; Windows uses PowerShell.
 			if runtime.GOOS != "linux" {
 				return "the reference uses the system tar/unzip, which differ outside Linux: not compared on " + runtime.GOOS, false
+			}
+			continue
+		}
+		if r == "darwin" {
+			// extractXar only works on macOS (extract7z only on Windows,
+			// where this suite does not run)
+			if runtime.GOOS != "darwin" {
+				return "the reference supports this only on macOS: not compared on " + runtime.GOOS, false
 			}
 			continue
 		}
