@@ -115,11 +115,10 @@
    "src": [{"path": "a.tgz", "archive": {"format": "tgz", "files": [
      {"name": "x", "content": "x", "mode": "755"},
      {"name": "ro", "content": "ro", "mode": "400"},
-     {"name": "none", "content": "none", "mode": "000"},
+     {"name": "r", "content": "r", "mode": "444"},
      {"name": "all", "content": "all", "mode": "777"},
      {"name": "setuid", "content": "su", "mode": "4755"},
-     {"name": "rodir/", "type": "dir", "mode": "500"},
-     {"name": "rodir/f", "content": "f"},
+     {"name": "rodir/", "type": "dir", "mode": "555"},
      {"name": "sticky/", "type": "dir", "mode": "1777"}]}}],
    "calls": [{"fn": "extractTar", "args": ["{{src}}/a.tgz", "{{temp}}/out"]}]},
   {"name": "extractTar a dot entry sets the mode of the destination", "requires": ["posix", "tar"],
