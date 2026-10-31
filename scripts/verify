@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# Fast offline checks. Exits 0 only when they all pass.
+# cache/ and github/ are left out: their tests need a GITHUB_TOKEN and network.
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+unformatted=$(gofmt -l .)
+if [ -n "$unformatted" ]; then
+  echo "gofmt needed on:" >&2
+  echo "$unformatted" >&2
+  exit 1
+fi
+
+go build ./...
+go vet ./core/... ./parity/...
+go test ./core/... ./parity/...

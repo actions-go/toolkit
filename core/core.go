@@ -118,7 +118,6 @@ func formatOutput(name, value string) string {
 			fmt.Sprintf("%s<<%s", name, delimiter),
 			value,
 			delimiter,
-			"",
 		},
 		EOF,
 	)
@@ -142,7 +141,7 @@ func AddPath(path string) {
 	if err := issueFileCommand(GitHubPathFilePathEnvName, path); err != nil {
 		Issue("add-path", path)
 	}
-	// TODO js: process.env['PATH'] = `${inputPath}${path.delimiter}${process.env['PATH']}`
+	os.Setenv("PATH", path+string(os.PathListSeparator)+os.Getenv("PATH"))
 }
 
 // GetBoolInput gets the value of an input and returns whether it is a truthy value per
@@ -186,7 +185,6 @@ func GetMultilineInput(name string) []string {
 func GetInput(name string) (string, bool) {
 	val, ok := lookupEnv(strings.ToUpper("INPUT_" + strings.Replace(name, " ", "_", -1)))
 	if !ok {
-		Debug("Did not find the input using plain gha input format, trying the actions-go one")
 		val, ok := jsonInputs[name]
 		if ok {
 			return strings.TrimSpace(val), true
@@ -208,7 +206,10 @@ func GetInputOrDefault(name, dflt string) string {
 // SetOutput sets the value of an output for future actions
 func SetOutput(name, value string) {
 	if err := issueFileCommand(GitHubOutputFilePathEnvName, formatOutput(name, value)); err != nil {
-		Warningf("did not find output file from environment variable %s, falling back to the deprecated command implementation", GitHubOutputFilePathEnvName)
+		// @actions/core writes an empty line before the deprecated command
+		stdoutSetter.Lock()
+		fmt.Fprintln(stdout)
+		stdoutSetter.Unlock()
 		IssueCommand("set-output", map[string]string{"name": name}, value)
 	}
 }
@@ -343,7 +344,6 @@ func WithoutCommands(endToken string, f func()) {
 // SaveState saves state for current action, the state can only be retrieved by this action's post job execution.
 func SaveState(name, value string) {
 	if err := issueFileCommand(GitHubStateFilePathEnvName, formatOutput(name, value)); err != nil {
-		Warningf("did not find state file from environment variable %s, falling back to the deprecated command implementation", GitHubStateFilePathEnvName)
 		IssueCommand("save-state", map[string]string{"name": name}, value)
 	}
 }

@@ -1,0 +1,71 @@
+[
+  {"name": "setOutput simple", "calls": [{"fn": "setOutput", "args": ["name", "value"]}]},
+  {"name": "setOutput multiline", "calls": [{"fn": "setOutput", "args": ["name", "line1\nline2"]}]},
+  {"name": "setOutput empty value", "calls": [{"fn": "setOutput", "args": ["name", ""]}]},
+  {"name": "setOutput twice", "calls": [{"fn": "setOutput", "args": ["a", "1"]}, {"fn": "setOutput", "args": ["b", "2"]}]},
+  {"name": "setOutput without file falls back to command", "noFiles": true, "calls": [{"fn": "setOutput", "args": ["name", "value"]}]},
+  {"name": "setOutput fallback escapes", "noFiles": true, "calls": [{"fn": "setOutput", "args": ["na:me", "a%b\nc"]}]},
+
+  {"name": "exportVariable", "observeEnv": ["FOO"], "calls": [{"fn": "exportVariable", "args": ["FOO", "bar"]}]},
+  {"name": "exportVariable multiline", "observeEnv": ["FOO"], "calls": [{"fn": "exportVariable", "args": ["FOO", "a\nb"]}]},
+  {"name": "exportVariable without file falls back to command", "noFiles": true, "observeEnv": ["FOO"], "calls": [{"fn": "exportVariable", "args": ["FOO", "bar"]}]},
+
+  {"name": "saveState and getState", "env": {"STATE_k": "from-env"}, "calls": [{"fn": "saveState", "args": ["k", "v"]}, {"fn": "getState", "args": ["k"]}, {"fn": "getState", "args": ["missing"]}]},
+  {"name": "saveState without file falls back to command", "noFiles": true, "calls": [{"fn": "saveState", "args": ["k", "v"]}]},
+
+  {"name": "addPath", "env": {"PATH": "/usr/bin"}, "observeEnv": ["PATH"], "calls": [{"fn": "addPath", "args": ["/opt/tool"]}]},
+  {"name": "addPath without file falls back to command", "noFiles": true, "env": {"PATH": "/usr/bin"}, "observeEnv": ["PATH"], "calls": [{"fn": "addPath", "args": ["/opt/tool"]}]},
+
+  {"name": "setSecret", "calls": [{"fn": "setSecret", "args": ["hunter2"]}]},
+  {"name": "setSecret with special chars", "calls": [{"fn": "setSecret", "args": ["a,b:c%d\ne"]}]},
+
+  {"name": "getInput basic", "env": {"INPUT_NAME": "value"}, "calls": [{"fn": "getInput", "args": ["name"]}]},
+  {"name": "getInput trims whitespace", "env": {"INPUT_NAME": "  value \n"}, "calls": [{"fn": "getInput", "args": ["name"]}]},
+  {"name": "getInput missing", "calls": [{"fn": "getInput", "args": ["name"]}]},
+  {"name": "getInput name with spaces", "env": {"INPUT_MY_INPUT": "v"}, "calls": [{"fn": "getInput", "args": ["my input"]}]},
+  {"name": "getInput name with dash keeps dash", "env": {"INPUT_MY-INPUT": "v"}, "calls": [{"fn": "getInput", "args": ["my-input"]}]},
+  {"name": "getInput required missing", "calls": [{"fn": "getInput", "args": ["name", {"required": true}]}]},
+  {"name": "getInput trimWhitespace false", "env": {"INPUT_NAME": "  value "}, "calls": [{"fn": "getInput", "args": ["name", {"trimWhitespace": false}]}]},
+
+  {"name": "getMultilineInput", "env": {"INPUT_LIST": "a\n b \n\nc"}, "calls": [{"fn": "getMultilineInput", "args": ["list"]}]},
+  {"name": "getMultilineInput missing", "calls": [{"fn": "getMultilineInput", "args": ["list"]}]},
+  {"name": "getMultilineInput crlf", "env": {"INPUT_LIST": "a\r\nb\r\n"}, "calls": [{"fn": "getMultilineInput", "args": ["list"]}]},
+
+  {"name": "getBooleanInput true", "env": {"INPUT_B": "true"}, "calls": [{"fn": "getBooleanInput", "args": ["b"]}]},
+  {"name": "getBooleanInput True", "env": {"INPUT_B": "True"}, "calls": [{"fn": "getBooleanInput", "args": ["b"]}]},
+  {"name": "getBooleanInput TRUE", "env": {"INPUT_B": "TRUE"}, "calls": [{"fn": "getBooleanInput", "args": ["b"]}]},
+  {"name": "getBooleanInput false", "env": {"INPUT_B": "false"}, "calls": [{"fn": "getBooleanInput", "args": ["b"]}]},
+  {"name": "getBooleanInput False", "env": {"INPUT_B": "False"}, "calls": [{"fn": "getBooleanInput", "args": ["b"]}]},
+  {"name": "getBooleanInput FALSE", "env": {"INPUT_B": "FALSE"}, "calls": [{"fn": "getBooleanInput", "args": ["b"]}]},
+  {"name": "getBooleanInput invalid", "env": {"INPUT_B": "yes"}, "calls": [{"fn": "getBooleanInput", "args": ["b"]}]},
+  {"name": "getBooleanInput missing", "calls": [{"fn": "getBooleanInput", "args": ["b"]}]},
+
+  {"name": "setFailed", "calls": [{"fn": "setFailed", "args": ["boom"]}]},
+  {"name": "setFailed escapes", "calls": [{"fn": "setFailed", "args": ["a:b,c%d\ne\rf"]}]},
+
+  {"name": "setCommandEcho on", "calls": [{"fn": "setCommandEcho", "args": [true]}]},
+  {"name": "setCommandEcho off", "calls": [{"fn": "setCommandEcho", "args": [false]}]},
+
+  {"name": "isDebug unset", "calls": [{"fn": "isDebug"}]},
+  {"name": "isDebug 1", "env": {"RUNNER_DEBUG": "1"}, "calls": [{"fn": "isDebug"}]},
+  {"name": "isDebug 0", "env": {"RUNNER_DEBUG": "0"}, "calls": [{"fn": "isDebug"}]},
+
+  {"name": "debug", "calls": [{"fn": "debug", "args": ["a debug message"]}]},
+  {"name": "debug escapes", "calls": [{"fn": "debug", "args": ["a:b,c%d\ne"]}]},
+  {"name": "info", "calls": [{"fn": "info", "args": ["hello"]}]},
+  {"name": "info command-like text", "calls": [{"fn": "info", "args": ["::error::not a command"]}]},
+
+  {"name": "error plain", "calls": [{"fn": "error", "args": ["bad"]}]},
+  {"name": "error escapes message", "calls": [{"fn": "error", "args": ["a:b,c%d\ne"]}]},
+  {"name": "warning plain", "calls": [{"fn": "warning", "args": ["careful"]}]},
+  {"name": "notice plain", "calls": [{"fn": "notice", "args": ["fyi"]}]},
+  {"name": "error with title only", "calls": [{"fn": "error", "args": ["bad", {"title": "T"}]}]},
+  {"name": "warning with file and line", "calls": [{"fn": "warning", "args": ["careful", {"file": "a.go", "startLine": 3}]}]},
+  {"name": "notice with all properties", "calls": [{"fn": "notice", "args": ["fyi", {"title": "T", "file": "a.go", "startLine": 1, "endLine": 2, "startColumn": 3, "endColumn": 4}]}]},
+  {"name": "annotation property escaping", "calls": [{"fn": "error", "args": ["m", {"title": "a:b,c%d\ne", "file": "x:y.go"}]}]},
+
+  {"name": "startGroup endGroup", "calls": [{"fn": "startGroup", "args": ["g"]}, {"fn": "endGroup"}]},
+
+  {"name": "toPosixPath", "calls": [{"fn": "toPosixPath", "args": ["C:\\a\\b/c"]}]},
+  {"name": "toWin32Path", "calls": [{"fn": "toWin32Path", "args": ["/a/b\\c"]}]}
+]
