@@ -1,7 +1,6 @@
 package cache
 
 import (
-	"bytes"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -42,11 +41,6 @@ func TestEnsureDestDir(t *testing.T) {
 	if runtime.GOOS != "windows" {
 		assert.Error(t, ensureDestDir("/some-non-existing-dir/some-file"))
 	}
-}
-
-func TestEnsureDestNotExists(t *testing.T) {
-	assert.NoError(t, ensureDestNotExists("sone-non-existing-file"))
-	assert.Error(t, ensureDestNotExists("tool.go"))
 }
 
 func TestToolPath(t *testing.T) {
@@ -197,27 +191,81 @@ func TestCleanSemver(t *testing.T) {
 	}
 }
 
-func TestCopyURL(t *testing.T) {
-	data := "hello-world"
-	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.Write([]byte(data)) }))
-	defer s.Close()
-	b := bytes.NewBuffer(nil)
-	assert.NoError(t, copyURL(b, s.URL))
-	assert.Equal(t, data, b.String())
-
-	assert.Error(t, copyURL(nil, s.URL))
-
-	assert.Error(t, copyURL(b, "this is not a URL"))
-
-	assert.Error(t, copyURL(writerInError{}, s.URL))
-
-	s.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusNotAcceptable) })
-	assert.Error(t, copyURL(bytes.NewBuffer(nil), s.URL))
+func TestRetryable(t *testing.T) {
+	for code, want := range map[int]bool{400: false, 401: false, 403: false, 404: false, 408: true, 429: true, 500: true, 503: true} {
+		assert.Equal(t, want, retryable(httpError{code}), "HTTP %d", code)
+	}
+	assert.True(t, retryable(errors.New("connection reset")))
 }
 
-type writerInError struct {
+// countingServer answers each request with the next status of statuses (the
+// last one repeats) and the body "payload" when it is 200.
+func countingServer(t *testing.T, statuses ...int) (url string, hits *int) {
+	t.Helper()
+	n := 0
+	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		status := statuses[len(statuses)-1]
+		if n < len(statuses) {
+			status = statuses[n]
+		}
+		n++
+		w.WriteHeader(status)
+		if status == http.StatusOK {
+			w.Write([]byte("payload"))
+		}
+	}))
+	t.Cleanup(s.Close)
+	return s.URL, &n
 }
 
-func (writerInError) Write([]byte) (int, error) {
-	return 0, errors.New("test-error")
+func TestDownloadToolRetries(t *testing.T) {
+	t.Setenv(retryMinSecondsEnv, "0")
+	t.Setenv(retryMaxSecondsEnv, "0")
+	dest := func() *DownloadToolOptions {
+		return &DownloadToolOptions{Destination: filepath.Join(t.TempDir(), "dl")}
+	}
+
+	url, hits := countingServer(t, 500)
+	options := dest()
+	_, err := DownloadTool(url, options)
+	assert.EqualError(t, err, "Unexpected HTTP response: 500")
+	assert.Equal(t, 3, *hits, "three attempts")
+	assert.NoFileExists(t, options.Destination)
+
+	url, hits = countingServer(t, 404)
+	_, err = DownloadTool(url, dest())
+	assert.EqualError(t, err, "Unexpected HTTP response: 404")
+	assert.Equal(t, 1, *hits, "a client error is not retried")
+
+	url, hits = countingServer(t, 503, 429, 200)
+	options = dest()
+	path, err := DownloadTool(url, options)
+	assert.NoError(t, err)
+	assert.Equal(t, 3, *hits)
+	content, err := os.ReadFile(path)
+	assert.NoError(t, err)
+	assert.Equal(t, "payload", string(content))
+
+	_, err = DownloadTool(url, options)
+	assert.EqualError(t, err, "Destination file path "+options.Destination+" already exists")
+}
+
+func TestDownloadToolFileMode(t *testing.T) {
+	url, _ := countingServer(t, 200)
+	path, err := DownloadTool(url, &DownloadToolOptions{Destination: filepath.Join(t.TempDir(), "dl"), FileMode: 0o600})
+	assert.NoError(t, err)
+	info, err := os.Stat(path)
+	assert.NoError(t, err)
+	if runtime.GOOS != "windows" {
+		assert.Equal(t, os.FileMode(0o600), info.Mode().Perm())
+	}
+}
+
+func TestNodeValues(t *testing.T) {
+	for goarch, want := range map[string]string{"amd64": "x64", "386": "ia32", "arm64": "arm64", "arm": "arm", "mipsle": "mipsel", "ppc64le": "ppc64", "s390x": "s390x", "riscv64": "riscv64"} {
+		assert.Equal(t, want, nodeArch(goarch), goarch)
+	}
+	for goos, want := range map[string]string{"windows": "win32", "linux": "linux", "darwin": "darwin", "solaris": "sunos", "freebsd": "freebsd"} {
+		assert.Equal(t, want, nodePlatform(goos), goos)
+	}
 }

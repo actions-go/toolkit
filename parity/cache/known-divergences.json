@@ -3,5 +3,7 @@
   {"scenario": "cacheDir empty tool name", "reason": "CacheOptions.Tool is validated and an error is returned; @actions/tool-cache accepts '' and caches straight into the root of the tool cache. Kept: the Go options struct makes an unset field indistinguishable from an empty one."},
   {"scenario": "cacheDir empty version", "reason": "CacheOptions.Version is validated and an error is returned; @actions/tool-cache accepts '' and caches into <tool>/<arch>. Kept: an unset field is indistinguishable from an empty one in the Go options struct."},
   {"scenario": "cacheFile empty tool name", "reason": "Same as 'cacheDir empty tool name': CacheOptions.Tool is validated in Go."},
-  {"scenario": "cacheFile empty version", "reason": "Same as 'cacheDir empty version': CacheOptions.Version is validated in Go."}
+  {"scenario": "cacheFile empty version", "reason": "Same as 'cacheDir empty version': CacheOptions.Version is validated in Go."},
+  {"scenario": "downloadTool redirect with a relative location", "reason": "Go follows a relative Location header as RFC 9110 requires; @actions/http-client passes it to new URL() and fails with 'Invalid URL' (retried three times). Reference bug, not reproduced."},
+  {"scenario": "downloadTool connection refused", "reason": "Transport errors carry the text of the runtime (node: 'connect ECONNREFUSED 127.0.0.1:1', Go: 'Get \"...\": dial tcp ...: connection refused'); the retry flow and the log lines around the message are identical."}
 ]
