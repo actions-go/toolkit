@@ -141,7 +141,15 @@ async function run(sc) {
     for (const call of sc.calls) {
       try {
         const fn = call.fn.startsWith('_') ? mm[call.fn] : tc[call.fn]
-        const value = await fn(...(call.args || []).map(subst))
+        // a reference call that never settles (a tar waiting on stdin, for
+        // example) must fail this scenario instead of hanging the whole run
+        let timer
+        const value = await Promise.race([
+          fn(...(call.args || []).map(subst)),
+          new Promise((_, reject) => {
+            timer = setTimeout(() => reject(new Error(`parity driver: ${call.fn} did not finish in 60s (scenario ${sc.name})`)), 60000)
+          })
+        ]).finally(() => clearTimeout(timer))
         returns.push({ value: value === undefined ? null : value })
       } catch (e) {
         returns.push({ error: e.message })
