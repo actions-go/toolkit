@@ -3,6 +3,8 @@
   "private": true,
   "type": "module",
   "dependencies": {
-    "@actions/core": "3.0.1"
+    "@actions/core": "3.0.1",
+    "@actions/github": "9.1.1",
+    "@actions/tool-cache": "4.0.0"
   }
 }
