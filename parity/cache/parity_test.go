@@ -145,9 +145,6 @@ func loadScenarios(t *testing.T) []scenario {
 		}
 		seen[s.Name] = true
 	}
-	if err := resolveArchives(all); err != nil {
-		t.Fatal(err)
-	}
 	return all
 }
 
@@ -650,6 +647,10 @@ func TestParityWithReferenceToolCache(t *testing.T) {
 		default:
 			skipped[sc.Name] = reason
 		}
+	}
+	// built here and not when loading: bzip2 archives need the binary
+	if err := resolveArchives(scenarios); err != nil {
+		t.Fatal(err)
 	}
 	merged, _ := json.Marshal(scenarios)
 	mergedFile := filepath.Join(t.TempDir(), "scenarios.json")

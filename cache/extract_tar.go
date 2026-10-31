@@ -510,6 +510,10 @@ func (x *tarExtraction) settle(err error) {
 	}
 	if errors.Is(err, io.ErrUnexpectedEOF) {
 		_ = os.Truncate(p.path, p.written/tarBlock*tarBlock)
+		if !x.opts.samePermissions {
+			// without the permissions of the archive tar still applies the mode
+			_ = os.Chmod(p.path, x.mode(p.h))
+		}
 		return
 	}
 	x.finish(p.path, p.h, true)
