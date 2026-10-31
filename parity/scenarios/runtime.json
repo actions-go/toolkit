@@ -31,5 +31,5 @@
   {"name": "platform isMacOS", "calls": [{"fn": "platform.isMacOS"}]},
   {"name": "platform isLinux", "calls": [{"fn": "platform.isLinux"}]},
   {"name": "platform getDetails", "inheritEnv": ["PATH"], "calls": [{"fn": "platform.getDetails"}]},
-  {"name": "platform getDetails without PATH", "skipOS": ["windows"], "skipReason": "the scenario targets a missing lsb_release/sw_vers on Unix; on Windows getDetails shells out to PowerShell and how a missing PATH is handled there differs between node and Go (not analysed further)", "calls": [{"fn": "platform.getDetails"}]}
+  {"name": "platform getDetails without PATH", "calls": [{"fn": "platform.getDetails"}]}
 ]
