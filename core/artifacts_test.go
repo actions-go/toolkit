@@ -20,7 +20,7 @@ func TestDeclareArtifact(t *testing.T) {
 
 		content, err := os.ReadFile(path)
 		require.NoError(t, err)
-		assert.Equal(t, "dist/app.tar.gz\noci://ghcr.io/octocat/app:1.0.0@sha256:abc\n", string(content))
+		assert.Equal(t, "dist/app.tar.gz"+EOF+"oci://ghcr.io/octocat/app:1.0.0@sha256:abc"+EOF, string(content))
 	})
 	t.Run("is a no-op when GITHUB_ARTIFACTS is unset", func(t *testing.T) {
 		t.Setenv(GitHubArtifactsEnvName, "")
