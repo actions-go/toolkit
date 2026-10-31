@@ -3,8 +3,10 @@
 //
 // Every scenario in scenarios/*.json is run through both implementations. The
 // observable behaviour (stdout, file commands, return values, errors, selected
-// environment variables) must be identical unless a documented entry exists in
-// known-divergences.json.
+// environment variables, requests received by a local server) must be identical
+// unless a documented entry exists in known-divergences.json.
+//
+// The scenario format is documented at the top of js/driver.mjs.
 package parity
 
 import (
@@ -30,8 +32,10 @@ type call struct {
 type scenario struct {
 	Name       string            `json:"name"`
 	Env        map[string]string `json:"env"`
+	InheritEnv []string          `json:"inheritEnv"`
 	NoFiles    bool              `json:"noFiles"`
 	ObserveEnv []string          `json:"observeEnv"`
+	Server     *serverSpec       `json:"server"`
 	Calls      []call            `json:"calls"`
 }
 
@@ -41,10 +45,11 @@ type ret struct {
 }
 
 type result struct {
-	Stdout  string             `json:"stdout"`
-	Returns []ret              `json:"returns"`
-	Files   map[string]string  `json:"files"`
-	Env     map[string]*string `json:"env"`
+	Stdout   string             `json:"stdout"`
+	Returns  []ret              `json:"returns"`
+	Files    map[string]string  `json:"files"`
+	Env      map[string]*string `json:"env"`
+	Requests []request          `json:"requests,omitempty"`
 }
 
 var fileEnvs = map[string]string{
@@ -65,6 +70,7 @@ func loadScenarios(t *testing.T) []scenario {
 	}
 	sort.Strings(paths)
 	var all []scenario
+	seen := map[string]bool{}
 	for _, p := range paths {
 		data, err := os.ReadFile(p)
 		if err != nil {
@@ -74,18 +80,35 @@ func loadScenarios(t *testing.T) []scenario {
 		if err := json.Unmarshal(data, &s); err != nil {
 			t.Fatalf("%s: %v", p, err)
 		}
+		for _, sc := range s {
+			if seen[sc.Name] {
+				t.Fatalf("%s: duplicate scenario name %q", p, sc.Name)
+			}
+			seen[sc.Name] = true
+		}
 		all = append(all, s...)
 	}
 	return all
 }
 
-func str(t *testing.T, raw json.RawMessage) string {
-	var s string
-	if err := json.Unmarshal(raw, &s); err != nil {
-		// the JS API accepts any value (setOutput(name, 42)); stringify like JS does
-		return strings.Trim(string(raw), `"`)
+// str converts a JSON argument the way the JS API stringifies it
+// (toCommandValue): strings as is, null as empty, anything else as compact JSON.
+func str(raw json.RawMessage) string {
+	var v interface{}
+	if err := json.Unmarshal(raw, &v); err != nil {
+		return string(raw)
 	}
-	return s
+	switch x := v.(type) {
+	case nil:
+		return ""
+	case string:
+		return x
+	}
+	var b bytes.Buffer
+	if err := json.Compact(&b, raw); err != nil {
+		return string(raw)
+	}
+	return b.String()
 }
 
 // props maps the JS annotation properties object to the Go struct.
@@ -109,7 +132,13 @@ func props(t *testing.T, c call) []core.AnnotationProperties {
 
 // invoke maps a JS function name to the equivalent Go call.
 func invoke(t *testing.T, c call) ret {
-	a := func(i int) string { return str(t, c.Args[i]) }
+	a := func(i int) string { return str(c.Args[i]) }
+	switch {
+	case strings.HasPrefix(c.Fn, "summary."):
+		return invokeSummary(t, strings.TrimPrefix(c.Fn, "summary."), c.Args)
+	case strings.HasPrefix(c.Fn, "platform."):
+		return invokePlatform(t, strings.TrimPrefix(c.Fn, "platform."))
+	}
 	switch c.Fn {
 	case "exportVariable":
 		core.ExportVariable(a(0), a(1))
@@ -146,10 +175,26 @@ func invoke(t *testing.T, c call) ret {
 		core.StartGroup(a(0))
 	case "endGroup":
 		core.EndGroup()
+	case "group":
+		return invokeGroup(t, c)
+	case "stopCommands":
+		core.StopCommands(a(0))
+	case "startCommands":
+		core.StartCommands(a(0))
 	case "saveState":
 		core.SaveState(a(0), a(1))
 	case "getState":
 		return ret{Value: core.GetState(a(0))}
+	case "getIDToken":
+		audience := ""
+		if len(c.Args) > 0 {
+			audience = a(0)
+		}
+		token, err := core.GetIDToken(audience)
+		if err != nil {
+			return ret{Error: err.Error()}
+		}
+		return ret{Value: token}
 	case "toPosixPath":
 		return ret{Value: core.ToPosixPath(a(0))}
 	case "toWin32Path":
@@ -162,8 +207,43 @@ func invoke(t *testing.T, c call) ret {
 	return ret{}
 }
 
+// callbackSpec is a function argument: the nested calls it runs, and optionally
+// an error it throws after running them.
+type callbackSpec struct {
+	Calls []call `json:"$calls"`
+	Throw string `json:"throw"`
+}
+
+func invokeGroup(t *testing.T, c call) (r ret) {
+	var cb callbackSpec
+	if err := json.Unmarshal(c.Args[1], &cb); err != nil {
+		t.Fatal(err)
+	}
+	// like the JS promise rejection, a throwing callback surfaces as the call's error
+	defer func() {
+		if p := recover(); p != nil {
+			r = ret{Error: fmt.Sprint(p)}
+		}
+	}()
+	core.Group(str(c.Args[0]), func() {
+		for _, n := range cb.Calls {
+			invoke(t, n)
+		}
+		if cb.Throw != "" {
+			panic(cb.Throw)
+		}
+	})
+	return ret{}
+}
+
 func runGo(t *testing.T, sc scenario) result {
 	t.Helper()
+	inherited := map[string]string{}
+	for _, k := range sc.InheritEnv {
+		if v, ok := os.LookupEnv(k); ok {
+			inherited[k] = v
+		}
+	}
 	for _, kv := range os.Environ() {
 		k := strings.SplitN(kv, "=", 2)[0]
 		if cleanedEnv.MatchString(k) || k == "PATH" {
@@ -171,6 +251,11 @@ func runGo(t *testing.T, sc scenario) result {
 			os.Unsetenv(k)
 		}
 	}
+	for k, v := range inherited {
+		t.Setenv(k, v)
+	}
+	// the summary builder caches the file path and buffer for the whole process
+	core.JobSummary = &core.Summary{}
 	dir := t.TempDir()
 	files := map[string]string{}
 	if !sc.NoFiles {
@@ -182,8 +267,14 @@ func runGo(t *testing.T, sc scenario) result {
 			t.Setenv(envName, files[key])
 		}
 	}
+	var srv *testServer
+	serverURL := ""
+	if sc.Server != nil {
+		srv = startServer(t, sc.Server)
+		serverURL = srv.URL
+	}
 	for k, v := range sc.Env {
-		t.Setenv(k, v)
+		t.Setenv(k, strings.ReplaceAll(v, "{{server}}", serverURL))
 	}
 
 	// capture both the injectable writer and the process stdout (core.Info prints directly)
@@ -223,6 +314,10 @@ func runGo(t *testing.T, sc scenario) result {
 			res.Env[k] = nil
 		}
 	}
+	if srv != nil {
+		res.Requests = srv.Requests()
+		srv.Close()
+	}
 	return res
 }
 
@@ -253,13 +348,19 @@ func runJS(t *testing.T, scenariosFile string) map[string]result {
 	return res
 }
 
-// normalisation of values that legitimately differ between runs/implementations
-var jsDelimiter = regexp.MustCompile(`ghadelimiter_[0-9a-f-]{36}`)
+// normalisation of values that legitimately differ between runs/implementations:
+// the file command delimiter is random in the reference, and the local server
+// listens on a different port each time.
+var (
+	jsDelimiter = regexp.MustCompile(`ghadelimiter_[0-9a-f-]{36}`)
+	serverAddr  = regexp.MustCompile(`http://127\.0\.0\.1:\d+`)
+)
 
 func (r result) normalise() result {
 	n := func(s string) string {
 		s = jsDelimiter.ReplaceAllString(s, "<DELIM>")
-		return strings.ReplaceAll(s, "_GitHubActionsGoFileCommandDelimeter_", "<DELIM>")
+		s = strings.ReplaceAll(s, "_GitHubActionsGoFileCommandDelimeter_", "<DELIM>")
+		return serverAddr.ReplaceAllString(s, "<SERVER>")
 	}
 	r.Stdout = n(r.Stdout)
 	files := map[string]string{}
@@ -267,6 +368,12 @@ func (r result) normalise() result {
 		files[k] = n(v)
 	}
 	r.Files = files
+	var returns []ret
+	for _, x := range r.Returns {
+		x.Error = n(x.Error)
+		returns = append(returns, x)
+	}
+	r.Returns = returns
 	return r
 }
 
