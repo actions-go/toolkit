@@ -27,6 +27,14 @@ const scenarios = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
 const server = process.argv[3]
 const results = {}
 
+// One node process runs every scenario: a scenario that sets PATH (the
+// "no xar in PATH" ones) must not leave it changed for the next ones.
+const originalEnv = { ...process.env }
+function restoreEnv() {
+  for (const k of Object.keys(process.env)) if (!(k in originalEnv)) delete process.env[k]
+  Object.assign(process.env, originalEnv)
+}
+
 // getManifestFromRepo reads https://api.github.com, which the reference does not
 // let anyone change. The requests to that host are sent to the test server
 // instead (the Go side points cache.ManifestAPIURL at it).
@@ -103,14 +111,6 @@ function snapshot(root) {
   }
   walk(root)
   return tree
-}
-
-// One node process runs every scenario: a scenario that sets PATH (the
-// "no xar in PATH" ones) must not leave it changed for the next ones.
-const originalEnv = { ...process.env }
-function restoreEnv() {
-  for (const k of Object.keys(process.env)) if (!(k in originalEnv)) delete process.env[k]
-  Object.assign(process.env, originalEnv)
 }
 
 async function run(sc) {
