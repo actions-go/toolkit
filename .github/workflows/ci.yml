@@ -35,6 +35,35 @@ jobs:
         git push origin HEAD:${{ github.event.ref }}
 
 
+  parity:
+    name: Parity with actions/toolkit (JavaScript)
+    runs-on: ubuntu-latest
+    steps:
+
+    - name: Check out code
+      uses: actions/checkout@v4.1.1
+
+    - name: Set up Go
+      uses: actions/setup-go@v4.1.0
+      with:
+        go-version: "1.26"
+
+    - name: Set up Node
+      uses: actions/setup-node@v4
+      with:
+        node-version: "22"
+        cache: npm
+        cache-dependency-path: parity/js/package-lock.json
+
+    - name: Install the reference @actions/core
+      run: npm ci
+      working-directory: parity/js
+
+    - name: Compare Go and JavaScript behaviour
+      env:
+        PARITY_REQUIRED: "1"
+      run: go test -v ./parity/...
+
   build:
     strategy:
       matrix:

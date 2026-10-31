@@ -1,0 +1,6 @@
+[
+  {"scenario": "getInput required missing", "reason": "GetInput has no `required` option; it returns (value, found) and the caller decides. Changing the signature would break the public API."},
+  {"scenario": "getInput trimWhitespace false", "reason": "GetInput always trims and has no options parameter (public API)."},
+  {"scenario": "getBooleanInput invalid", "reason": "GetBoolInput returns false for an invalid value where JS throws a TypeError; Go has no error return (public API)."},
+  {"scenario": "getBooleanInput missing", "reason": "GetBoolInput returns false for an unset input where JS throws a TypeError; Go has no error return (public API)."}
+]

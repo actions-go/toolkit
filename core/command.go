@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"sort"
 	"strings"
 	"sync"
 )
@@ -80,11 +81,42 @@ type command struct {
 func (c *command) String() string {
 	s := cmdString + c.command
 	sep := " "
-	for key, value := range c.properties {
-		s += sep + key + "=" + escape(value)
+	for _, key := range sortedPropertyKeys(c.properties) {
+		s += sep + key + "=" + escape(c.properties[key])
 		sep = ","
 	}
-	return s + cmdString + escape(c.message)
+	return s + cmdString + escapeData(c.message)
+}
+
+// propertyOrder is the order @actions/core emits annotation properties in.
+var propertyOrder = []string{"title", "file", "line", "endLine", "col", "endColumn"}
+
+// sortedPropertyKeys returns the keys in a deterministic order: the annotation
+// properties in the order @actions/core uses, then any other key alphabetically.
+func sortedPropertyKeys(properties map[string]string) []string {
+	keys := make([]string, 0, len(properties))
+	for _, k := range propertyOrder {
+		if _, ok := properties[k]; ok {
+			keys = append(keys, k)
+		}
+	}
+	var others []string
+	for k := range properties {
+		if !contains(propertyOrder, k) {
+			others = append(others, k)
+		}
+	}
+	sort.Strings(others)
+	return append(keys, others...)
+}
+
+func contains(list []string, v string) bool {
+	for _, e := range list {
+		if e == v {
+			return true
+		}
+	}
+	return false
 }
 
 func escapePatterns(v string, replacementsArg ...map[string]string) string {
