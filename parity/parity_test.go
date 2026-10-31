@@ -47,6 +47,7 @@ type ret struct {
 type result struct {
 	Stdout   string             `json:"stdout"`
 	Returns  []ret              `json:"returns"`
+	Failed   bool               `json:"failed"`
 	Files    map[string]string  `json:"files"`
 	Env      map[string]*string `json:"env"`
 	Requests []request          `json:"requests,omitempty"`
@@ -256,6 +257,7 @@ func runGo(t *testing.T, sc scenario) result {
 	}
 	// the summary builder caches the file path and buffer for the whole process
 	core.JobSummary = &core.Summary{}
+	core.ResetStatus()
 	dir := t.TempDir()
 	files := map[string]string{}
 	if !sc.NoFiles {
@@ -298,7 +300,7 @@ func runGo(t *testing.T, sc scenario) result {
 	}()
 	stdout, _ := os.ReadFile(out.Name())
 
-	res := result{Stdout: string(stdout), Returns: returns, Files: map[string]string{}, Env: map[string]*string{}}
+	res := result{Stdout: string(stdout), Returns: returns, Failed: core.Status() == core.StatusFailed, Files: map[string]string{}, Env: map[string]*string{}}
 	for key, p := range files {
 		data, err := os.ReadFile(p)
 		if err != nil && !os.IsNotExist(err) {
