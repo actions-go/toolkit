@@ -39,6 +39,10 @@ type entry struct {
 	Mode    string  `json:"mode,omitempty"`
 	Dir     bool    `json:"dir,omitempty"`
 	Symlink *string `json:"symlink,omitempty"`
+	// Base64 is binary content. Archive describes an archive that the test
+	// builds (see archives_test.go); it is turned into Base64 before use.
+	Base64  string       `json:"base64,omitempty"`
+	Archive *archiveSpec `json:"archive,omitempty"`
 }
 
 type call struct {
@@ -47,12 +51,15 @@ type call struct {
 }
 
 type scenario struct {
-	Name  string            `json:"name"`
-	Env   map[string]string `json:"env"`
-	Src   []entry           `json:"src"`
-	Cache []entry           `json:"cache"`
-	Temp  []entry           `json:"temp"`
-	Calls []call            `json:"calls"`
+	Name string `json:"name"`
+	// Requires lists what the scenario needs: "posix" (not run on Windows) and
+	// the names of binaries the reference shells out to (tar, unzip, bzip2).
+	Requires []string          `json:"requires,omitempty"`
+	Env      map[string]string `json:"env"`
+	Src      []entry           `json:"src"`
+	Cache    []entry           `json:"cache"`
+	Temp     []entry           `json:"temp"`
+	Calls    []call            `json:"calls"`
 }
 
 type ret struct {
@@ -137,6 +144,9 @@ func loadScenarios(t *testing.T) []scenario {
 		}
 		seen[s.Name] = true
 	}
+	if err := resolveArchives(all); err != nil {
+		t.Fatal(err)
+	}
 	return all
 }
 
@@ -162,7 +172,14 @@ func materialise(t *testing.T, base string, entries []entry) {
 				t.Fatal(err)
 			}
 		default:
-			if err := os.WriteFile(p, []byte(e.Content), 0o644); err != nil {
+			content := []byte(e.Content)
+			if e.Base64 != "" {
+				var err error
+				if content, err = base64.StdEncoding.DecodeString(e.Base64); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if err := os.WriteFile(p, content, 0o644); err != nil {
 				t.Fatal(err)
 			}
 		}
@@ -270,6 +287,19 @@ func invoke(t *testing.T, d dirs, c call) ret {
 			opts = &cache.DownloadToolOptions{Destination: a(1)}
 		}
 		return result1(cache.DownloadTool(a(0), opts))
+	case "extractTar":
+		var flags []string
+		if len(c.Args) > 2 {
+			switch f := c.Args[2].(type) {
+			case string:
+				flags = []string{d.subst(f).(string)}
+			case []interface{}:
+				for _, v := range f {
+					flags = append(flags, fmt.Sprint(d.subst(v)))
+				}
+			}
+		}
+		return result1(cache.ExtractTar(a(0), a(1), flags...))
 	default:
 		t.Fatalf("no Go adapter for %q", c.Fn)
 	}
@@ -394,6 +424,19 @@ func (r result) normalise(server string) result {
 	return r
 }
 
+// toolDiagnostic matches what tar, gzip, bzip2 and unzip print on their error
+// stream, and the blank lines some of them add.
+var toolDiagnostic = regexp.MustCompile(`(?m)^(?:\S*/(?:tar|unzip)|tar \(child\)|tar|gzip|bzip2|unzip|bsdtar|warning|error|End-of-central-directory|note|\s+\(attempting)\b.*\n|^\n`)
+
+// dropToolDiagnostics removes the messages of the binaries the reference runs.
+// The reference forwards their error stream to the log, and their wording
+// belongs to the tool installed (GNU tar, bsdtar, Info-ZIP...), not to the
+// package: the Go port reads archives itself and only reports failure through
+// the error it returns, which is compared.
+func dropToolDiagnostics(stdout string) string {
+	return toolDiagnostic.ReplaceAllString(stdout, "")
+}
+
 type divergence struct {
 	Scenario string `json:"scenario"`
 	Reason   string `json:"reason"`
@@ -480,6 +523,26 @@ func TestHarnessMatchesHandWorkedAnswer(t *testing.T) {
 	assert.Equal(t, string(wantJSON), string(goJSON), "Go")
 }
 
+// unmet explains why the scenario cannot run here, or returns "". Windows is
+// left out on purpose: the reference extracts with PowerShell there (zip) or
+// with a different tar, none of which the Go port shells out to, and the
+// runners have no unzip. A missing binary is only an error under
+// PARITY_REQUIRED (the CI runners that have it).
+func unmet(sc scenario) (reason string, fatal bool) {
+	for _, r := range sc.Requires {
+		if r == "posix" {
+			if runtime.GOOS == "windows" {
+				return "the reference extracts differently on Windows (PowerShell, bsdtar): not compared", false
+			}
+			continue
+		}
+		if _, err := exec.LookPath(r); err != nil {
+			return fmt.Sprintf("the reference shells out to %s, which is not installed", r), true
+		}
+	}
+	return "", false
+}
+
 func TestParityWithReferenceToolCache(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		// The scenarios compare POSIX file system behaviour: permission bits,
@@ -489,7 +552,20 @@ func TestParityWithReferenceToolCache(t *testing.T) {
 		// bits), not from the port. Linux and macOS cover the suite.
 		t.Skip("the cache suite compares POSIX file system semantics")
 	}
-	scenarios := loadScenarios(t)
+	all := loadScenarios(t)
+	var scenarios []scenario
+	skipped := map[string]string{}
+	for _, sc := range all {
+		reason, fatal := unmet(sc)
+		switch {
+		case reason == "":
+			scenarios = append(scenarios, sc)
+		case fatal && os.Getenv("PARITY_REQUIRED") != "":
+			t.Errorf("scenario %q: %s", sc.Name, reason)
+		default:
+			skipped[sc.Name] = reason
+		}
+	}
 	merged, _ := json.Marshal(scenarios)
 	mergedFile := filepath.Join(t.TempDir(), "scenarios.json")
 	if err := os.WriteFile(mergedFile, merged, 0o644); err != nil {
@@ -509,8 +585,12 @@ func TestParityWithReferenceToolCache(t *testing.T) {
 				t.Fatalf("js driver returned nothing for %s", sc.Name)
 			}
 			got := runGo(t, sc, srv.URL)
-			g, _ := json.MarshalIndent(got.normalise(srv.URL), "", "  ")
-			w, _ := json.MarshalIndent(want.normalise(srv.URL), "", "  ")
+			gn, wn := got.normalise(srv.URL), want.normalise(srv.URL)
+			if len(sc.Requires) > 0 {
+				gn.Stdout, wn.Stdout = dropToolDiagnostics(gn.Stdout), dropToolDiagnostics(wn.Stdout)
+			}
+			g, _ := json.MarshalIndent(gn, "", "  ")
+			w, _ := json.MarshalIndent(wn, "", "  ")
 			same := bytes.Equal(g, w)
 			if reason, isKnown := known[sc.Name]; isKnown {
 				seen[sc.Name] = true
@@ -525,10 +605,15 @@ func TestParityWithReferenceToolCache(t *testing.T) {
 			}
 		})
 	}
+	for name, reason := range skipped {
+		name, reason := name, reason
+		t.Run(name, func(t *testing.T) { t.Skip(reason) })
+		seen[name] = true
+	}
 	for name := range known {
 		if !seen[name] {
 			t.Errorf("known-divergences.json lists unknown scenario %q", name)
 		}
 	}
-	fmt.Fprintf(os.Stderr, "cache parity: %d scenarios, %d known divergences\n", len(scenarios), len(known))
+	fmt.Fprintf(os.Stderr, "cache parity: %d scenarios compared, %d skipped here, %d known divergences\n", len(scenarios), len(skipped), len(known))
 }

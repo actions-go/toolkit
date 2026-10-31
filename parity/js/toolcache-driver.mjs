@@ -38,7 +38,7 @@ function materialise(base, entries) {
       fs.mkdirSync(p, { recursive: true })
     } else {
       fs.mkdirSync(path.dirname(p), { recursive: true })
-      fs.writeFileSync(p, e.content || '')
+      fs.writeFileSync(p, e.base64 ? Buffer.from(e.base64, 'base64') : e.content || '')
     }
     if (e.mode && e.symlink === undefined) fs.chmodSync(p, parseInt(e.mode, 8))
   }
