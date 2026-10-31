@@ -6,7 +6,9 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
 	"strings"
+	"time"
 
 	"github.com/actions-go/toolkit/core"
 	"github.com/google/uuid"
@@ -23,6 +25,25 @@ func createExtractFolder(dest string) (string, error) {
 		return "", err
 	}
 	return dest, nil
+}
+
+// deferredDir is a directory whose mode and time are set once its content is
+// extracted, so that a read only directory can be filled.
+type deferredDir struct {
+	path  string
+	mode  os.FileMode
+	mtime time.Time
+}
+
+// applyDirectories sets the mode and time of the directories, deepest first.
+func applyDirectories(dirs []deferredDir) {
+	sort.SliceStable(dirs, func(i, j int) bool { return len(dirs[i].path) > len(dirs[j].path) })
+	for _, d := range dirs {
+		_ = os.Chmod(d.path, d.mode)
+		if !d.mtime.IsZero() {
+			_ = os.Chtimes(d.path, d.mtime, d.mtime)
+		}
+	}
 }
 
 // which finds an executable in PATH like io.which(tool, true) of @actions/io

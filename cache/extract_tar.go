@@ -13,10 +13,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
-	"sort"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/actions-go/toolkit/core"
 )
@@ -324,14 +322,6 @@ type tarExtraction struct {
 	extracted map[string]string
 }
 
-// deferredDir is a directory whose mode and time are set once its content is
-// extracted, so that a read only directory can be filled.
-type deferredDir struct {
-	path  string
-	mode  os.FileMode
-	mtime time.Time
-}
-
 // memberName turns an archive name into a path relative to the destination,
 // like tar does: leading slashes are removed, "." parts ignored and
 // --strip-components applied. ok is false for a member to ignore (nothing is
@@ -453,16 +443,7 @@ func (x *tarExtraction) directory(path string, h *tar.Header) bool {
 	return true
 }
 
-// applyDirectories sets the mode and time of the directories, deepest first.
-func (x *tarExtraction) applyDirectories() {
-	sort.SliceStable(x.dirs, func(i, j int) bool { return len(x.dirs[i].path) > len(x.dirs[j].path) })
-	for _, d := range x.dirs {
-		_ = os.Chmod(d.path, d.mode)
-		if !d.mtime.IsZero() {
-			_ = os.Chtimes(d.path, d.mtime, d.mtime)
-		}
-	}
-}
+func (x *tarExtraction) applyDirectories() { applyDirectories(x.dirs) }
 
 // removeEntry removes what is at path unless it is a directory.
 func removeEntry(path string) error {
