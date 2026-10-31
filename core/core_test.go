@@ -67,7 +67,7 @@ func TestFormatOutput(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("This test only runs on unix with \\n line separator")
 	}
-	assert.Equal(t, "my-name<<_GitHubActionsGoFileCommandDelimeter_\nmy-value\n_GitHubActionsGoFileCommandDelimeter_\n", formatOutput("my-name", "my-value"))
+	assert.Equal(t, "my-name<<_GitHubActionsGoFileCommandDelimeter_\nmy-value\n_GitHubActionsGoFileCommandDelimeter_", formatOutput("my-name", "my-value"))
 }
 
 func TestOutputTasks(t *testing.T) {
