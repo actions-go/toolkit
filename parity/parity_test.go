@@ -17,6 +17,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"sort"
 	"strings"
 	"testing"
@@ -37,6 +38,10 @@ type scenario struct {
 	ObserveEnv []string          `json:"observeEnv"`
 	Server     *serverSpec       `json:"server"`
 	Calls      []call            `json:"calls"`
+	// SkipOS lists runtime.GOOS values on which the scenario is not compared;
+	// SkipReason must say why, it is printed in the test output.
+	SkipOS     []string `json:"skipOS"`
+	SkipReason string   `json:"skipReason"`
 }
 
 type ret struct {
@@ -419,6 +424,11 @@ func TestParityWithReferenceCore(t *testing.T) {
 			want, ok := js[sc.Name]
 			if !ok {
 				t.Fatalf("js driver returned nothing for %s", sc.Name)
+			}
+			for _, osName := range sc.SkipOS {
+				if osName == runtime.GOOS {
+					t.Skipf("not compared on %s: %s", osName, sc.SkipReason)
+				}
 			}
 			got := runGo(t, sc)
 			g, _ := json.MarshalIndent(got.normalise(), "", "  ")
