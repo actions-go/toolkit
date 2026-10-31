@@ -613,8 +613,13 @@ func TestHarnessMatchesHandWorkedAnswer(t *testing.T) {
 func unmet(sc scenario) (reason string, fatal bool) {
 	for _, r := range sc.Requires {
 		if r == "posix" {
-			if runtime.GOOS == "windows" {
-				return "the reference extracts differently on Windows (PowerShell, bsdtar): not compared", false
+			// The reference shells out to the system tar and unzip. The Go
+			// extractors reproduce GNU tar and Info-ZIP unzip as shipped on
+			// Linux. macOS ships bsdtar and another unzip build, whose listings
+			// differ ("creating: d" vs "creating: d/") and whose file names come
+			// back Unicode-normalised differently; Windows uses PowerShell.
+			if runtime.GOOS != "linux" {
+				return "the reference uses the system tar/unzip, which differ outside Linux: not compared on " + runtime.GOOS, false
 			}
 			continue
 		}
