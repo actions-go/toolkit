@@ -76,6 +76,19 @@ func TestExtractRootMkdirParentsRefusesEscapingSymlinks(t *testing.T) {
 	assert.Equal(t, filepath.Join(root.dir, "real", "new"), parent)
 }
 
+func TestZipName(t *testing.T) {
+	rel, dir := zipName("/a/../b/./c/")
+	assert.Equal(t, filepath.Join("a", "b", "c"), rel, "unzip drops the leading slash and the .. parts")
+	assert.True(t, dir)
+
+	rel, dir = zipName("file.txt")
+	assert.Equal(t, "file.txt", rel)
+	assert.False(t, dir)
+
+	rel, _ = zipName("../..")
+	assert.Equal(t, "", rel)
+}
+
 func TestSafeLink(t *testing.T) {
 	root := extractRoot{dir: "/dest"}
 	assert.True(t, root.safeLink("/dest/d", "../a"))
