@@ -10,7 +10,13 @@
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
+import http from 'node:http'
+import https from 'node:https'
+import { syncBuiltinESMExports } from 'node:module'
 import * as tc from '@actions/tool-cache'
+// the internal helpers of the reference (_getOsVersion...) are not exported by the
+// package, the file is imported by its location
+const mm = await import(new URL('./node_modules/@actions/tool-cache/lib/manifest.js', import.meta.url))
 
 // downloadTool retries three times, sleeping 10-20s between attempts; the
 // reference exposes these globals so tests do not wait.
@@ -21,10 +27,24 @@ const scenarios = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
 const server = process.argv[3]
 const results = {}
 
+// getManifestFromRepo reads https://api.github.com, which the reference does not
+// let anyone change. The requests to that host are sent to the test server
+// instead (the Go side points cache.ManifestAPIURL at it).
+const serverURL = new URL(server)
+const httpsRequest = https.request
+https.request = (options, ...rest) => {
+  if (options && options.host === 'api.github.com') {
+    return http.request({ ...options, host: serverURL.hostname, port: serverURL.port, agent: undefined }, ...rest)
+  }
+  return httpsRequest(options, ...rest)
+}
+syncBuiltinESMExports()
+
 for (const sc of scenarios) {
   results[sc.name] = await run(sc)
 }
-process.stdout.write(JSON.stringify(results))
+// a request that failed halfway can leave a socket open, which would keep the process alive
+process.stdout.write(JSON.stringify(results), () => process.exit(0))
 
 // materialise creates the fixture entries below base.
 function materialise(base, entries) {
@@ -84,14 +104,17 @@ async function run(sc) {
   process.env.RUNNER_TEMP = dirs.temp
   for (const [k, v] of Object.entries(sc.env || {})) process.env[k] = v
 
-  const subst = v =>
-    typeof v === 'string'
-      ? v
-          .replaceAll('{{src}}', dirs.src)
-          .replaceAll('{{cache}}', dirs.cache)
-          .replaceAll('{{temp}}', dirs.temp)
-          .replaceAll('{{server}}', server)
-      : v
+  const subst = v => {
+    if (Array.isArray(v)) return v.map(subst)
+    if (v && typeof v === 'object') return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, subst(x)]))
+    if (typeof v !== 'string') return v
+    return v
+      .replaceAll('{{src}}', dirs.src)
+      .replaceAll('{{cache}}', dirs.cache)
+      .replaceAll('{{temp}}', dirs.temp)
+      .replaceAll('{{server}}', server)
+      .replaceAll('{{osversion}}', v.includes('{{osversion}}') ? mm._getOsVersion() : '')
+  }
 
   let stdout = ''
   const realWrite = process.stdout.write
@@ -103,7 +126,8 @@ async function run(sc) {
   try {
     for (const call of sc.calls) {
       try {
-        const value = await tc[call.fn](...(call.args || []).map(subst))
+        const fn = call.fn.startsWith('_') ? mm[call.fn] : tc[call.fn]
+        const value = await fn(...(call.args || []).map(subst))
         returns.push({ value: value === undefined ? null : value })
       } catch (e) {
         returns.push({ error: e.message })
