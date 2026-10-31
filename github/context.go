@@ -106,7 +106,8 @@ type ActionContext struct {
 }
 
 func noGitHubEvent(path string) {
-	fmt.Printf("GITHUB_EVENT_PATH %s does not exist\n", path)
+	// @actions/github terminates the message with os.EOL
+	fmt.Printf("GITHUB_EVENT_PATH %s does not exist%s", path, core.EOF)
 }
 
 func getIndex(a []string, i int) string {
