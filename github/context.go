@@ -85,6 +85,8 @@ type ActionContext struct {
 	EventName         string
 	SHA               string
 	Ref               string
+	RefName           string
+	RefType           string
 	Workflow          string
 	Action            string
 	Actor             string
@@ -139,6 +141,8 @@ func ParseActionEnv() ActionContext {
 		EventName:         os.Getenv("GITHUB_EVENT_NAME"),
 		SHA:               os.Getenv("GITHUB_SHA"),
 		Ref:               os.Getenv("GITHUB_REF"),
+		RefName:           os.Getenv("GITHUB_REF_NAME"),
+		RefType:           os.Getenv("GITHUB_REF_TYPE"),
 		Workflow:          os.Getenv("GITHUB_WORKFLOW"),
 		Action:            os.Getenv("GITHUB_ACTION"),
 		Actor:             os.Getenv("GITHUB_ACTOR"),
