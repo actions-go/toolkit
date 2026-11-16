@@ -53,7 +53,7 @@ Not ported yet: download retries (marked `TODO` in `DownloadTool`).
 
 ### [github](github)
 
-A [go-github](https://github.com/google/go-github) client (v42) authenticated from `GITHUB_TOKEN`, or from the `github-token` or `token` input, plus the workflow context. [GoDoc](https://godoc.org/github.com/actions-go/toolkit/github).
+A [go-github](https://github.com/google/go-github) client (v74) authenticated from `GITHUB_TOKEN`, or from the `github-token` or `token` input, plus the workflow context. [GoDoc](https://godoc.org/github.com/actions-go/toolkit/github).
 
 - `github.GitHub` is a ready-to-use client; `github.NewClient()` builds a new one. It targets GitHub Enterprise when `GITHUB_SERVER_URL` is not `https://github.com`, and adds the `ACTIONS_ORCHESTRATION_ID` tag to the user agent.
 - `github.ParseActionEnv()` returns the run context (repo, event name, SHA, ref, actor, payload and so on) from the runner environment.
